@@ -1,0 +1,84 @@
+# Python
+.Python
+__pycache__/
+.pytest_cache
+*.py[cod]
+.env/
+.env
+gpt_omnia/.env/
+
+.~env/
+.venv
+venv/
+env3.*/
+.dev
+.denv
+.pypyenv
+.pytest_cache/
+
+# Distribution / packaging
+env/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheelhouse/
+*.egg-info/
+pip-wheel-metadata/
+Pipfile.lock
+.installed.cfg
+*.egg
+.eggs
+MANIFEST
+
+# dummy
+try.py
+
+# Temporary files
+*.~*
+tmp/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Windows
+*.bat
+Thumbs.db
+Desktop.ini
+
+# Mac OS X
+*.DS_Store
+
+# Other
+*.tgz
+
+# Pycharm project files
+*.idea
+.idea/**
+
+# VSCode
+
+.vscode/*
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+indexes
+logs
