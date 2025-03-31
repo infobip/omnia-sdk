@@ -1,6 +1,8 @@
+import dataclasses
+
 import requests
 
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE
+from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, PAYLOAD
 from omnia_sdk.workflow.logging.logging import omnia_logger
 from omnia_sdk.workflow.tools.channels import config as channels_config
 from omnia_sdk.workflow.tools.channels._context import add_response, set_session_id
@@ -14,6 +16,20 @@ HTTP = "HTTP"
 
 
 messages_url = f"{channels_config.INFOBIP_BASE_URL}/messages-api/1/messages"
+
+
+# data model for outbound messages with buttons
+@dataclasses.dataclass
+class ButtonMessage:
+    role: str
+    content: dict
+    buttons: list[str]
+
+    def get_payload(self):
+        return self.content[PAYLOAD]
+
+    def get_buttons(self):
+        return self.buttons
 
 
 """

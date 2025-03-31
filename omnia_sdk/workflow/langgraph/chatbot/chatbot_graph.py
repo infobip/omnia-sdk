@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph
 from langgraph.types import Command, interrupt
 
 from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguration
-from omnia_sdk.workflow.chatbot.chatbot_state import ButtonMessage, ChatbotState, ConversationCycle, Message
+from omnia_sdk.workflow.chatbot.chatbot_state import ChatbotState, ConversationCycle, Message
 from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
     BUTTONS,
@@ -20,7 +20,7 @@ from omnia_sdk.workflow.chatbot.constants import (
     USER_ROLE,
 )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
-from omnia_sdk.workflow.tools.channels.omni_channels import send_buttons, send_message
+from omnia_sdk.workflow.tools.channels.omni_channels import ButtonMessage, send_buttons, send_message
 
 """
 This module contains the prototype class for chatbot applications built via LangGraph.
@@ -33,7 +33,7 @@ To get familiar with LangGraph features, check examples here:
 To get started with Omnia-sdk user should create a new class that inherits from ChatbotFlow and implement methods:
  - nodes(...)
  - transitions(...)
- 
+
 MEMORY STATE
 This SDK will automatically checkpoint memory state so user does not have to return deltas in every node function.
 Simply modify state in-place using accessor methods in ChatbotGraph class and SDK will take care of the rest.
@@ -126,11 +126,11 @@ class ChatbotFlow(ABC):
         """
         pass
 
-    def set_entry_point(self, start_node: str):
+    def create_entry_point(self, start_node: str) -> None:
         """
-        Graph requires MANDATORY entry point.
-        User should set the entry point to the graph via:
-            self.create_entry_point("start_node_name")
+        Sets start_node as entry node in the graph.
+        This method is MANDATORY to be called once nodes are created.
+        :param start_node: to be set as entry point
         """
         self.__graph.set_entry_point(start_node)
 
@@ -175,12 +175,9 @@ class ChatbotFlow(ABC):
 
     # this method is executed every time user starts a new journey in the session (from the start node)
     def _invoke(self, message: Message, config: dict) -> None:
-        current_state = self._get_state(message=message, config=config)
+        current_state = self._prepare_state(message=message, config=config)
         if self._should_continue(config, message):
             self.workflow.invoke({CHATBOT_STATE: current_state}, config=config)
-
-    def create_entry_point(self, start_node: str):
-        self.__graph.set_entry_point(start_node)
 
     def add_node(self, name: str, function: Callable) -> None:
         """
@@ -251,7 +248,15 @@ class ChatbotFlow(ABC):
         # first ever message in the session
         return self.on_session_start(message=message, config=config)
 
-    def _get_state(self, message: Message, config: dict) -> ChatbotState:
+    def get_state(self, config: dict) -> State:
+        """
+        Returns the state of the chatbot.
+        :param config: with session and channel details
+        :return: current state of the chatbot
+        """
+        return self.workflow.get_state(config=config).values
+
+    def _prepare_state(self, message: Message, config: dict) -> ChatbotState:
         """
         Returns the state of the chatbot with the user's message and session details.
         If this is a new conversation cycle, user message will initiative new conversation cycle in the state.
@@ -278,7 +283,7 @@ class ChatbotFlow(ABC):
         return state[CHATBOT_STATE][_user_language]
 
     @staticmethod
-    def get_user_message(state: State) -> str | None:
+    def get_user_message(state: State) -> dict:
         """
         Returns the last user message from the current conversation cycle in the state.
         :param state: from which to return the user's message
@@ -287,8 +292,19 @@ class ChatbotFlow(ABC):
         messages = state[CHATBOT_STATE][CONVERSATION_CYCLES][-1].messages
         for message in reversed(messages):
             if message.role == USER_ROLE:
-                return message.content[PAYLOAD]
-        return None
+                return message.content
+        return {}
+
+    @staticmethod
+    def get_last_message(state: State) -> Message:
+        """
+        Returns the last user or AI message from the current conversation cycle in the state.
+        :param state: from which to return the last message
+        :return: the last message, can be inbound or outbound
+        """
+
+        last_message = ChatbotFlow.get_current_cycle(state=state).messages[-1]
+        return last_message if last_message else None
 
     @staticmethod
     def get_intent(state: State) -> str:
@@ -318,7 +334,17 @@ class ChatbotFlow(ABC):
         :param state: of conversation
         :return: current conversation cycle with most recent actions by the user and chatbot.
         """
-        return state[CHATBOT_STATE][CONVERSATION_CYCLES][-1]
+        return ChatbotFlow.get_all_cycles(state=state)[-1]
+
+    @staticmethod
+    def get_all_cycles(state: State) -> list[ConversationCycle]:
+        """
+        Returns all conversation cycles from the start of conversation.
+
+        :param state: of conversation
+        :return: all conversation cycles from the start of conversation
+        """
+        return state[CHATBOT_STATE][CONVERSATION_CYCLES]
 
     @staticmethod
     def get_variable(state: State, name: str) -> str:

@@ -19,20 +19,6 @@ class Message:
         return self.content[PAYLOAD]
 
 
-# data model for outbound messages with buttons
-@dataclasses.dataclass
-class ButtonMessage:
-    role: str
-    content: dict
-    buttons: list[str]
-
-    def get_payload(self):
-        return self.content[PAYLOAD]
-
-    def get_buttons(self):
-        return self.buttons
-
-
 # every time users completes a flow and comes back to <start> node, we create a new conversation cycle
 @dataclasses.dataclass
 class ConversationCycle:
