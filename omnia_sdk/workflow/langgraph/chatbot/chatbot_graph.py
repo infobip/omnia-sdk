@@ -11,18 +11,28 @@ from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguratio
 from omnia_sdk.workflow.chatbot.chatbot_state import ChatbotState, ConversationCycle, Message
 from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
-    BUTTONS,
     CONFIGURABLE,
     LANGUAGE,
-    MESSAGE,
     PAYLOAD,
+    TEXT,
     TYPE,
-    USER_ROLE,
-)
+    USER,
+    )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
-from omnia_sdk.workflow.tools.channels.omni_channels import ButtonMessage, send_buttons, send_message
+from omnia_sdk.workflow.tools.channels.omni_channels import (
+    BUTTON_REPLY,
+    ButtonDefinition,
+    get_outbound_buttons_format,
+    get_outbound_text_format,
+    send_message,
+    )
+from omnia_sdk.workflow.tools.localization.cpaas_translation_table import CPaaSTranslationTable
+from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
 
 """
+This class should enable easy access to Infobip's SaaS, CPaaS and AI services while simplifying LangGraph state management.
+Built graph is **channel agnostic** and can be multilingual with the help of language detector and translation table.
+
 This module contains the prototype class for chatbot applications built via LangGraph.
 To get started we recommend to first check TinyChatbot example in the project.
 Afterwards, you could check more complete examples here:
@@ -33,6 +43,7 @@ To get familiar with LangGraph features, check examples here:
 To get started with Omnia-sdk user should create a new class that inherits from ChatbotFlow and implement methods:
  - nodes(...)
  - transitions(...)
+User is also required to invoke method create_entry_point("start_node_name") inside nodes(...) method.
 
 MEMORY STATE
 This SDK will automatically checkpoint memory state so user does not have to return deltas in every node function.
@@ -69,25 +80,14 @@ class State(TypedDict):
     chatbot_state: Annotated[ChatbotState, reduce_state]
 
 
-"""
-This class is a prototype for chatbot applications via LangGraph.
-User is required to implement methods:
- - nodes(...)
- - transitions(...)
-
-This class should enable easy access to Infobip's SaaS, CPaaS and AI services while simplifying LangGraph state management.
-Built graph is **channel agnostic** and can be multilingual with the help of language detector and translation table.
-"""
-
-
 class ChatbotFlow(ABC):
     # This constructor will be invoked by runtime environment with user submitted files
-    def __init__(
-        self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration = None, translation_table: dict = None
-    ):
+    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration = None,
+                 translation_table: TranslationTable = None):
         self.__graph = StateGraph(State)
         self.configuration = configuration
-        self.translation_table = translation_table
+        self.translation_table = translation_table if translation_table else CPaaSTranslationTable(translation_table_cpaas={},
+                                                                                                   translation_table_constants={})
         self._nodes()
         self._transitions()
         checkpointer = checkpointer if checkpointer else MemorySaver()
@@ -102,7 +102,7 @@ class ChatbotFlow(ABC):
         instead of directly modifying the graph.
 
         IMPORTANT:
-        user must define entry point once nodes are created via:
+        User must invoke create_entry_point method to set the entry point of the graph:
             self.create_entry_point("start_node_name")
 
         This method will ensure that LangGraph state is always correctly checkpointed after each node execution without requiring
@@ -139,12 +139,12 @@ class ChatbotFlow(ABC):
         This method is executed only once on first user message in the session. This can be done to validate user and/or render
         a welcome message.
 
-        :param message: of the user
+        :param message: user message
         :param config: channel and session details
-        :return: None
+        :return: true if chatbot flow should continue, false otherwise
         """
         # line here is to avoid warning for unused variables
-        _ = (message, config)
+        _ = (self, message, config)
         return True
 
     # Not yet supported
@@ -160,7 +160,7 @@ class ChatbotFlow(ABC):
         input is needed to proceed.
         Upon receiving user's input method will continue paused graph execution.
 
-        :param message: of the user
+        :param message: user message
         :param config: channel and session parameters
         """
         # end node does not have any nodes to which it loops back
@@ -173,10 +173,10 @@ class ChatbotFlow(ABC):
     def _resume(self, message: Message, config: dict) -> None:
         self.workflow.invoke(input=Command(resume=message), config=config)
 
-    # this method is executed every time user starts a new journey in the session (from the start node)
+    # this method is executed every time user starts a new conversation cycle in chatbot graph (from the start node)
     def _invoke(self, message: Message, config: dict) -> None:
         current_state = self._prepare_state(message=message, config=config)
-        if self._should_continue(config, message):
+        if self._should_start(config=config, message=message):
             self.workflow.invoke({CHATBOT_STATE: current_state}, config=config)
 
     def add_node(self, name: str, function: Callable) -> None:
@@ -185,7 +185,7 @@ class ChatbotFlow(ABC):
         This method will ensure that LangGraph state is always correctly checkpointed after the node execution.
         User should not need to write return state deltas in every node function.
 
-        :param name: of the node
+        :param name: node name
         :param function: to be executed in the node
         """
         self.__graph.add_node(name, NodeCheckpointer(function))
@@ -209,32 +209,28 @@ class ChatbotFlow(ABC):
     def send_predefined_response(self, key: str, state: State, config: dict, **kwargs) -> None:
         """
         Sends predefined response from translation table to the user, on the channel in which user initiated the conversation.
+        Translation table values should contain messages, buttons, etc. which can be sent to the user in the Infobip's
+        messaging format.
+        You can see example in our omnia-sdk-examples repository.
 
         :param key: in translation table
         :param state: having user's language
         :param config: channel and session details
         :param kwargs: parameters which can be used to format the localised response template.
-        :return: None
         """
-        message = self.get_localized_value(key=key, state=state)
-        message = message.format(**(self.get_variables(state) | kwargs))
-        ChatbotFlow.send_response(message=message, state=state, config=config)
+        kwargs = self.get_variables(state) | kwargs
+        content = self.translation_table.get_localized_message(key=key, language=self.get_language(state), **kwargs)
+        ChatbotFlow.send_response(content=content, state=state, config=config)
 
-    def send_buttons_response(self, key: str, state: State, config: dict, **kwargs) -> None:
-        button_info = self.get_localized_value(key=key, state=state)
-        message = button_info[MESSAGE].format(**(self.get_variables(state) | kwargs))
-        send_buttons(message=message, buttons=button_info[BUTTONS], config=config)
-        button_message = ButtonMessage(role=ASSISTANT, content={TYPE: "text", PAYLOAD: message}, buttons=button_info[BUTTONS])
-        ChatbotFlow.get_current_cycle(state=state).messages.append(button_message)
-
-    def get_localized_value(self, key: str, state: State) -> str | dict:
+    def get_localized_constant(self, key: str, state: State) -> str:
         """
-        Returns value (str or dict) from translation table for the key in table and current language in the state
-        :param key: in translation table
-        :param state: having user's language
-        :return: localised value from translation table
+        Returns localized constant from the translation table.
+        :param key: in the translation table
+        :param state: with user's language
+        :return: localized constant
         """
-        return self.translation_table[key][self.get_language(state=state)]
+        language = self.get_language(state=state)
+        return self.translation_table.get_localized_constant(key=key, language=language)
 
     # returns true if this is the first user's message in the session, false otherwise
     def _is_new_session(self, config: dict) -> bool:
@@ -242,7 +238,7 @@ class ChatbotFlow(ABC):
         return len(snapshot) == 0
 
     # returns true if graph should be executed for this context (e.g. successful authorization), false otherwise
-    def _should_continue(self, config, message):
+    def _should_start(self, config: dict, message: Message) -> bool:
         if not self._is_new_session(config=config):
             return True
         # first ever message in the session
@@ -283,7 +279,7 @@ class ChatbotFlow(ABC):
         return state[CHATBOT_STATE][_user_language]
 
     @staticmethod
-    def get_user_message(state: State) -> dict:
+    def get_user_message(state: State) -> Message | None:
         """
         Returns the last user message from the current conversation cycle in the state.
         :param state: from which to return the user's message
@@ -291,9 +287,37 @@ class ChatbotFlow(ABC):
         """
         messages = state[CHATBOT_STATE][CONVERSATION_CYCLES][-1].messages
         for message in reversed(messages):
-            if message.role == USER_ROLE:
-                return message.content
-        return {}
+            if message.role == USER:
+                return message
+        return None
+
+    @staticmethod
+    def get_user_message_text(state: State) -> str | None:
+        """
+        Returns last user message text from current conversation cycle.
+        If last message is not text message, None will be returned.
+
+        :param state: from which to return the user's message text
+        :return: the last user message text or None if last message is not text message
+        """
+        user_message = ChatbotFlow.get_user_message(state=state)
+        if user_message.content[TYPE] != TEXT.upper():
+            return None
+        return user_message.content[TEXT]
+
+    @staticmethod
+    def get_user_message_button_payload(state: State) -> dict:
+        """
+        Returns last user message button payload from current conversation cycle.
+        If last message is not button message, None will be returned.
+
+        :param state: from which to return the user's message button payload
+        :return: the last user message button payload or None if last message is not button message
+        """
+        user_message = ChatbotFlow.get_user_message(state=state)
+        if user_message.content[TYPE] != BUTTON_REPLY:
+            return {}
+        return {PAYLOAD: user_message.content[PAYLOAD], TEXT: user_message.content[TEXT]}
 
     @staticmethod
     def get_last_message(state: State) -> Message:
@@ -302,7 +326,6 @@ class ChatbotFlow(ABC):
         :param state: from which to return the last message
         :return: the last message, can be inbound or outbound
         """
-
         last_message = ChatbotFlow.get_current_cycle(state=state).messages[-1]
         return last_message if last_message else None
 
@@ -321,7 +344,6 @@ class ChatbotFlow(ABC):
         Saves intent of the user in the state.
         :param state: of conversation
         :param intent: determined by an intent engine
-        :return: None
         """
         ChatbotFlow.get_current_cycle(state=state).intent = intent
 
@@ -348,6 +370,13 @@ class ChatbotFlow(ABC):
 
     @staticmethod
     def get_variable(state: State, name: str) -> str:
+        """
+        Returns user defined variable saved in the state.
+
+        :param state: of conversation
+        :param name: of the variable
+        :return: user defined variable saved in the state
+        """
         return state[CHATBOT_STATE][VARIABLES].get(name)
 
     @staticmethod
@@ -362,23 +391,51 @@ class ChatbotFlow(ABC):
         return config[CONFIGURABLE][THREAD_ID]
 
     @staticmethod
-    def send_response(message: str, state: State, config: dict) -> None:
+    def send_text_response(text: str, state: State, config: dict):
         """
-        Sends response to the user on the channel in which user initiated the conversation.
-        :param message: to send to the user
-        :param state: of the conversation
+        Sends text response to the user on the channel in which user initiated the conversation.
+
+        :param text: to send to the user
+        :param state: conversation state
         :param config: channel and session details
         """
-        message = Message(role=ASSISTANT, content={TYPE: "text", PAYLOAD: message})
-        send_message(message=message.get_payload(), config=config)
+        content = get_outbound_text_format(text=text)
+        ChatbotFlow.send_response(content=content, state=state, config=config)
+
+    @staticmethod
+    def send_buttons_response(text: str, buttons: list[ButtonDefinition], state: State, config: dict):
+        """
+        Sends text message with buttons to the user on the channel in which user initiated the conversation.
+
+        :param text: to send to the user
+        :param buttons: to render in chat
+        :param state: conversation state
+        :param config: channel and session details
+        """
+        content = get_outbound_buttons_format(text=text, buttons=buttons)
+        ChatbotFlow.send_response(content=content, state=state, config=config)
+
+    @staticmethod
+    def send_response(content: dict, state: State, config: dict = None) -> None:
+        """
+        Sends response to the user on the channel in which user initiated the conversation.
+        :param content: channel payload to send to user
+        :param state: conversation state
+        :param config: channel and session details
+        """
+        message = Message(role=ASSISTANT, content=content)
+        send_message(message=message, config=config)
         ChatbotFlow.save_message(state=state, message=message)
 
     @staticmethod
-    def wait_user_input(state: State, config: dict, variable_name: str = None, extractor: Callable = lambda x: x) -> None:
+    def wait_user_input(state: State, config: dict, variable_name: str = None, extractor: Callable = lambda x: x) -> Any | None:
         """
         Waits for user input over the communication channel and saves it in the state. Variable name if specified will
         save the extracted value from the user's message.
         Extractor callable can be used to pre-process extracted value, e.g. convert user's message to desired type.
+        We extract text content from the user's message with the following rules:
+         - If user sends text message, we extract entire content
+         - If user sends button message, we extract postback data
 
         IMPORTANT!
         When interrupt is used to read human's input, LangGraph will execute node from the beginning!
@@ -390,21 +447,25 @@ class ChatbotFlow(ABC):
         :param config: session and channel details
         :param variable_name: in which user's input should be saved
         :param extractor: function that maps user's message to desired type
+        :return: extracted text content from user message
         """
         message: Message = interrupt(value="")
         state[CHATBOT_STATE][_user_language] = (
             config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[CONFIGURABLE] else state[CHATBOT_STATE][_user_language]
         )
-        if variable_name:
-            ChatbotFlow.save_variable(name=variable_name, value=extractor(message.content[PAYLOAD]), state=state)
         ChatbotFlow.save_message(state=state, message=message)
+        payload_extractors = [ChatbotFlow.get_user_message_text(state), ChatbotFlow.get_user_message_button_payload(state).get(PAYLOAD)]
+        variable = next((x for x in payload_extractors if x), None)
+        if variable_name:
+            ChatbotFlow.save_variable(name=variable_name, value=extractor(variable), state=state)
+        return extractor(variable)
 
     @staticmethod
     def save_variable(name: str, value: Any, state: State) -> None:
         """
         Saves a variable in the state.
         :param name: lookup name of the variable
-        :param value: of the variable
+        :param value: variable value
         :param state: to persist the variable
         """
         state[CHATBOT_STATE][VARIABLES][name] = value
@@ -414,6 +475,6 @@ class ChatbotFlow(ABC):
         """
         Saves message of the user to the current conversation cycle in the state.
         :param state: in which to save the message
-        :param message: of the user
+        :param message: user message
         """
         ChatbotFlow.get_current_cycle(state=state).messages.append(message)

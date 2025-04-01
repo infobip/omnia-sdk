@@ -17,7 +17,7 @@ This will simplify addition of more languages later for users that wish to start
  Language detector can work in two regimes:
   - LLM detector
   - Infobip's NLP model custom trained for language detection task
-LLM detector will work better for deployments with frequent hybrid language scenarios, e.g. Arabic mixed with English.
+LLM detector will work better for deployments with frequent hybrid language scenarios, e.g. Arabic mixed with English inside same text.
 However, it is going to come with latency (+500ms) and cost considerations.
 
 NLP model is *free* and has 1 ms latency. It should work great when user tends to not mix the languages in same message.

@@ -8,7 +8,7 @@ from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_reques
 
 """
 This module provides integration with Infobip's Whatsapp API.
-User may alternatively use omni_channel.py module to send messages to Whatsapp but some features might be missing there.
+User may alternatively use omni_channels.py module to send messages to Whatsapp.
 
 """
 
@@ -53,8 +53,8 @@ def _create_payload(template_message: WhatsAppTemplateMessage, config: dict, sen
             "templateName": template_message.template_name,
             "templateData": {"body": {"placeholders": _escape_placeholders(template_message.placeholders)}},
             "language": config.get("language"),
-        },
-    }
+            },
+        }
 
 
 def _escape_placeholders(placeholders: list[str]) -> list[str]:

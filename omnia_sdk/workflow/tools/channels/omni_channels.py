@@ -1,8 +1,9 @@
-import dataclasses
+from collections import namedtuple
 
 import requests
 
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, PAYLOAD
+from omnia_sdk.workflow.chatbot.chatbot_state import Message
+from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE
 from omnia_sdk.workflow.logging.logging import omnia_logger
 from omnia_sdk.workflow.tools.channels import config as channels_config
 from omnia_sdk.workflow.tools.channels._context import add_response, set_session_id
@@ -11,55 +12,80 @@ from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_reques
 BUSINESS_NUMBER = "business_number"
 END_USER_NUMBER = "end_user_number"
 CHANNEL = "channel"
-
 HTTP = "HTTP"
-
+BUTTON_REPLY = "BUTTON_REPLY"
+CONSOLE = "CONSOLE"
+POSTBACK_DATA = "postbackData"
 
 messages_url = f"{channels_config.INFOBIP_BASE_URL}/messages-api/1/messages"
-
-
-# data model for outbound messages with buttons
-@dataclasses.dataclass
-class ButtonMessage:
-    role: str
-    content: dict
-    buttons: list[str]
-
-    def get_payload(self):
-        return self.content[PAYLOAD]
-
-    def get_buttons(self):
-        return self.buttons
-
 
 """
 This module provides integration with Infobip's Omni Channel API
 User may send content to various channels with a single API which abstracts channel details.
 """
 
+InboundContent = namedtuple("InboundContent", ["type", "payload"])
+ButtonDefinition = namedtuple("ButtonDefinition", ["type", "text", "postback_data"])
 
-def send_message(message: str, config: dict) -> None:
+
+def get_outbound_text_format(text: str) -> dict:
+    """
+    Prepares text message to be compliant with Messages API format.
+    Messages API https://www.infobip.com/docs/api/platform/messages-api
+
+    :param text: to send
+    :return: message content in Messages API format
+    """
+    return {"body": {TYPE: TEXT.upper(), TEXT: text}}
+
+
+def get_outbound_buttons_format(text: str, buttons: list[ButtonDefinition]) -> dict:
+    """
+    Prepares text message with buttons to be compliant with Messages API format.
+
+    :param text: to send
+    :param buttons: buttons to show
+    :return: message content in Messages API format
+    """
+    return {
+        "body": {TYPE: TEXT.upper(), TEXT: text},
+        "buttons": [{TYPE: button.type, TEXT: button.text, POSTBACK_DATA: button.postback_data} for button in buttons],
+        }
+
+
+def send_message(message: Message, config: dict) -> None:
     """
     Sends text message to the channel defined in config.
-    :param message:to send
+    :param message: to send
     :param config: with session and channel details
     """
-    content = {"body": {"text": message, "type": "TEXT"}}
+    _send_to_channel(content=message.content, config=config)
+
+
+def send_text(text: str, config: dict) -> None:
+    """
+    Sends text message to the channel defined in config. This method directly sends text message
+    to the channel without persisting message in state of flow. If you also want to persist message in state of flow
+    use send_text_response from ChatbotGraphFlow.
+
+    :param text: to send
+    :param config: with session and channel details
+    """
+    content = get_outbound_text_format(text=text)
     _send_to_channel(content=content, config=config)
 
 
-def send_buttons(message: str, buttons: list[str], config: dict) -> None:
+def send_buttons(text: str, buttons: list[ButtonDefinition], config: dict) -> None:
     """
-    Sends message and buttons to the channel defined in config.
+    Sends message and buttons to the channel defined in config. This method directly sends button message
+    to the channel without persisting message in state of flow. If you also want to persist message in state of flow
+    use send_buttons_response from ChatbotGraphFlow.
 
-    :param message:to send
+    :param text: to send with buttons
     :param buttons: to render in chat
     :param config: with session and channel details
     """
-    content = {
-        "body": {"text": message, "type": "TEXT"},
-        "buttons": [{"type": "REPLY", "text": button, "postbackData": button} for button in buttons],
-    }
+    content = get_outbound_buttons_format(text=text, buttons=buttons)
     _send_to_channel(content=content, config=config)
 
 
@@ -71,7 +97,9 @@ def send_template():
 def _send_to_channel(content: dict, config: dict):
     configurable = config[CONFIGURABLE]
     channel = configurable[CHANNEL]
-    omnia_logger.debug(f"sending: {content}\n to channel: {channel}")
+    if channel == CONSOLE:
+        omnia_logger.info(f"Sending content to console:\n{content}")
+        return
     try:
         if channel == HTTP:
             callback_url = configurable.get("callback_url")
@@ -82,7 +110,7 @@ def _send_to_channel(content: dict, config: dict):
                     "message-id": configurable["message_id"],
                     "user-id": configurable["user_id"],
                     "flow-id": configurable["flow_id"],
-                }
+                    }
                 _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
             # collect response for synchronous HTTP communication
             else:

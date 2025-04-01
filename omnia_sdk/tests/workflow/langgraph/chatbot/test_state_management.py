@@ -3,12 +3,12 @@ from langgraph.constants import END
 
 from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguration
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, PAYLOAD
+from omnia_sdk.workflow.chatbot.constants import ASSISTANT, CONFIGURABLE, TEXT, TYPE, USER
 from omnia_sdk.workflow.langgraph.chatbot.chatbot_graph import THREAD_ID, ChatbotFlow, State
 
 thread_id = "123"
-m1 = Message(role="user", content={"type": "text", PAYLOAD: "Hello from John Doe"})
-a1 = Message(role="AI", content={"type": "text", PAYLOAD: "Hello back at you"})
+m1 = Message(role=USER, content={TYPE: TEXT.upper(), TEXT: "Hello from John Doe"})
+a1 = Message(role=ASSISTANT, content={TYPE: TEXT.upper(), TEXT: "Hello back at you"})
 foo, bar = ("foo", "bar")
 start, date = ("start", "date")
 
@@ -26,7 +26,7 @@ class TinyChatbot(ChatbotFlow):
         super().__init__(checkpointer=checkpointer, configuration=configuration, translation_table=translation_table)
 
     def start(self, state: State, config: dict):
-        assert m1.content == self.get_user_message(state=state)
+        assert m1 == self.get_user_message(state=state)
         assert config[CONFIGURABLE][THREAD_ID] == thread_id
         self.save_message(state=state, message=a1)
         self.save_variable(name=foo, value=bar, state=state)
@@ -34,7 +34,7 @@ class TinyChatbot(ChatbotFlow):
     def date(self, state: State):
         # transition to date node decorated with node_checkpointer.py should work even if it does not declare config parameter
         assert bar == self.get_variable(name=foo, state=state)
-        assert m1.content == self.get_user_message(state=state)
+        assert m1 == self.get_user_message(state=state)
         assert a1 == self.get_last_message(state=state)
 
     def _nodes(self):

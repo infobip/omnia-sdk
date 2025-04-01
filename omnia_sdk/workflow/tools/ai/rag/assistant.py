@@ -13,9 +13,8 @@ RAG pipeline should be built via portal or API (TODO details) before using this 
 """
 
 
-def assistant_response(
-    message: str, assistant_id: str, config: dict, prompt_var: str = None, context: str = None, error_message: str = None
-) -> str:
+def assistant_response(message: str, assistant_id: str, config: dict, prompt_var: str = None, context: str = None,
+                       error_message: str = None, language: str = None) -> str:
     """
     Calls pre-built RAG assistant endpoint for the user's message.
     In an event of unlikely error, the error_message will be returned.
@@ -27,18 +26,18 @@ def assistant_response(
     :param prompt_var: which can be used to dynamically modify RAG prompt
     :param context: external context which can override RAG chunks
     :param error_message: optional message which can returned to user in case of an unexpected error. Otherwise, error is raised.
+    :param language: language of the user message
     :return: RAG response if successful. In case of an error, error_message if defined will be returned with fallback to
     raising  ApplicationError.
     """
     session_id = config[CONFIGURABLE]["thread_id"]
-    language = config[CONFIGURABLE].get("language")
     headers = {"return-contexts": "true", "session-id": session_id, "assistant-id": assistant_id} | default_headers
     message = f"{message}\n{_get_local_language_instruction(lang_iso=language)}"
     body = {"message": message, "prompt_var": prompt_var, "context": context}
     try:
         response = retryable_request(
             x=requests.post, config=config, url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/2/query", json=body, headers=headers
-        )
+            )
         return response["message"]
     except ApplicationError as application_error:
         if error_message:
