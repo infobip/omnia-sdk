@@ -43,24 +43,26 @@ def retryable_request(config, x, decode_json: bool = True, **kwargs) -> dict | b
         if response.status_code < 400:
             return response.json() if decode_json else response.content
 
-        # API call error, no recovery from this
+        # API call error, no recovery/retries from this
         if response.status_code < 500:
-            omnia_logger.error(
-                f"url: {kwargs.get('url')}\nrequest info: {logging_details(config)}\n request failed due to user error with status code: "
-                f"{response.status_code}.\n response: {response.text}"
-            )
+            _log_error(config, kwargs, response)
             raise UserRequestError(code=response.status_code, message=response.text)
 
-        # this should signal transient API error which might be fixed with retry
-        omnia_logger.error(
-            f"url: {kwargs.get('url')}\nrequest info: {logging_details(config)}\n request failed due to application error with status code:"
-            f" {response.status_code} and response {response.text}"
-        )
+        # Transient API error (500+) might be fixed with retry
+        time.sleep(_backoff_seconds)
+        _log_error(config, kwargs, response, error_type="application")
         attempts.append({"error": f"{response.text}", "status_code": {response.status_code}})
 
     # all retries failed, endpoint is AFK
     raise ApplicationError(code=500, message=f"Request failed after {_max_attempts} attempts.", trace=attempts)
 
 
-def logging_details(config: dict) -> str:
+def _log_error(config, kwargs, response, error_type: str = "user"):
+    omnia_logger.error(
+        f"url: {kwargs.get('url')}\nrequest info: {_logging_details(config)}\n request failed due to {error_type} error with status code: "
+        f"{response.status_code}.\n response: {response.text}"
+    )
+
+
+def _logging_details(config: dict) -> str:
     return f"Account info: chid: {config.get('chid')} session-id: {config.get('thread_id')} channel: {config.get('channel')}"
