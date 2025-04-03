@@ -17,7 +17,7 @@ from omnia_sdk.workflow.chatbot.constants import (
     TEXT,
     TYPE,
     USER,
-    )
+)
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
 from omnia_sdk.workflow.tools.channels.omni_channels import (
     BUTTON_REPLY,
@@ -25,7 +25,7 @@ from omnia_sdk.workflow.tools.channels.omni_channels import (
     get_outbound_buttons_format,
     get_outbound_text_format,
     send_message,
-    )
+)
 from omnia_sdk.workflow.tools.localization.cpaas_translation_table import CPaaSTranslationTable
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
 
@@ -86,8 +86,9 @@ class ChatbotFlow(ABC):
                  translation_table: TranslationTable = None):
         self.__graph = StateGraph(State)
         self.configuration = configuration
-        self.translation_table = translation_table if translation_table else CPaaSTranslationTable(translation_table_cpaas={},
-                                                                                                   translation_table_constants={})
+        self.translation_table = translation_table if translation_table else CPaaSTranslationTable(
+            translation_table_cpaas={},
+            translation_table_constants={})
         self._nodes()
         self._transitions()
         checkpointer = checkpointer if checkpointer else MemorySaver()
@@ -110,7 +111,6 @@ class ChatbotFlow(ABC):
         """
         pass
 
-    @abstractmethod
     def _transitions(self):
         """
         User should implement this method to define transitions of the chatbot graph.
@@ -119,10 +119,16 @@ class ChatbotFlow(ABC):
             - self.add_conditional_edge("from_node", self.transition_function)
         instead of directly modifying the graph.
 
+        ALTERNATIVE IMPLEMENTATION:
+        Users may also define edges via Command objects or Transition objects in the node functions.
+        - https://blog.langchain.dev/command-a-new-tool-for-multi-agent-architectures-in-langgraph/
+        See the test_commands_state_management.py for example
+
         IMPORTANT:
          - It is MANDATORY to use at least one edge to LangGraph's END node like bellow:
                  self.add_edge("travel_confirmation", END)
         see: https://langchain-ai.github.io/langgraph/concepts/low_level/
+
         """
         pass
 
@@ -257,10 +263,12 @@ class ChatbotFlow(ABC):
         Returns the state of the chatbot with the user's message and session details.
         If this is a new conversation cycle, user message will initiative new conversation cycle in the state.
         """
-        language = config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[CONFIGURABLE] else self.configuration.default_language
+        language = config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[
+            CONFIGURABLE] else self.configuration.default_language
         snapshot = self.workflow.get_state(config=config).values
         if not snapshot:
-            return ChatbotState(conversation_cycles=[ConversationCycle(messages=[message])], user_language=language, variables={})
+            return ChatbotState(conversation_cycles=[ConversationCycle(messages=[message])], user_language=language,
+                                variables={})
 
         cycles = snapshot.get(CHATBOT_STATE).get(CONVERSATION_CYCLES)
         intent = cycles[-1].intent
@@ -428,7 +436,8 @@ class ChatbotFlow(ABC):
         ChatbotFlow.save_message(state=state, message=message)
 
     @staticmethod
-    def wait_user_input(state: State, config: dict, variable_name: str = None, extractor: Callable = lambda x: x) -> Any | None:
+    def wait_user_input(state: State, config: dict, variable_name: str = None,
+                        extractor: Callable = lambda x: x) -> Any | None:
         """
         Waits for user input over the communication channel and saves it in the state. Variable name if specified will
         save the extracted value from the user's message.
@@ -454,7 +463,8 @@ class ChatbotFlow(ABC):
             config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[CONFIGURABLE] else state[CHATBOT_STATE][_user_language]
         )
         ChatbotFlow.save_message(state=state, message=message)
-        payload_extractors = [ChatbotFlow.get_user_message_text(state), ChatbotFlow.get_user_message_button_payload(state).get(PAYLOAD)]
+        payload_extractors = [ChatbotFlow.get_user_message_text(state),
+                              ChatbotFlow.get_user_message_button_payload(state).get(PAYLOAD)]
         variable = next((x for x in payload_extractors if x), None)
         if variable_name:
             ChatbotFlow.save_variable(name=variable_name, value=extractor(variable), state=state)
