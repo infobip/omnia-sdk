@@ -6,7 +6,7 @@ authors = ["Team 42"]
 
 readme = "README.md"
 [tool.poetry.dependencies]
-python = ">=3.12, <3.13"
+python = ">=3.12, <3.14"
 holidays = "^0.66"
 langgraph = "^0.2.70"
 pytest = "^8.3.4"

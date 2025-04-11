@@ -24,6 +24,6 @@ Workflows are 100% runnable in local environment, user only needs to set Infobip
 To install the SDK for local development we recommend poetry environment:
  - poetry add git+https://github.com/infobip/omnia-sdk.git
 
-Python 3.12.X is mandatory.
+Python 3.12.X or 3.13.X is mandatory.
 
 Client should expect that Infobip's endpoints are always available and that the SDK will handle all the necessary retries and error handling.
