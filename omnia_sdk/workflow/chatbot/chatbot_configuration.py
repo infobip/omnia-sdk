@@ -1,4 +1,7 @@
 import dataclasses
+from typing import Self
+
+import yaml
 
 from omnia_sdk.workflow.chatbot.constants import LLM_DETECTOR
 
@@ -61,3 +64,24 @@ class ChatbotConfiguration:
     default_language: str
     language_detector: LanguageDetectorConfig = None
     concurrent_session: str = "enqueue"  # this is the only strategy supported for now, see the module docstring for details
+
+    @staticmethod
+    def from_yaml(path: str) -> "ChatbotConfiguration":
+        """
+        Load configuration from YAML file.
+
+        :param path: Path to the YAML file.
+        :return: An instance of ChatbotConfiguration.
+        """
+        with open(path, encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        language_detector = ChatbotConfiguration._read_language_detector(data.get("language_detector"))
+        return ChatbotConfiguration(default_language=data["default_language"], language_detector=language_detector,
+                                    concurrent_session=data.get("concurrent_session", "enqueue"))
+
+    @staticmethod
+    def _read_language_detector(lang_detector_data) -> LanguageDetectorConfig | None:
+        if not lang_detector_data:
+            return None
+        return LanguageDetectorConfig(expected_languages=set(lang_detector_data["expected_languages"]),
+                                      model=lang_detector_data.get("model", LLM_DETECTOR))

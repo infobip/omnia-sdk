@@ -1,5 +1,7 @@
 from typing import override
 
+import yaml
+
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable, dfs_format_json
 
 
@@ -46,3 +48,17 @@ class CPaaSTranslationTable(TranslationTable):
         :return: constant in correct language
         """
         return self.translation_table_constants[key][language]
+
+    @staticmethod
+    def from_yaml(path: str) -> 'CPaaSTranslationTable':
+        """
+        Load translation table data from a YAML file.
+
+        :param path: Path to the YAML file.
+        :return: A dictionary with keys for CPAAS and constants translations.
+        """
+        with open(path, encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+
+        return CPaaSTranslationTable(translation_table_cpaas=data.get("translation_table_cpaas", {}),
+                                     translation_table_constants=data.get("translation_table_constants", {}))

@@ -65,9 +65,10 @@ Additionally, there are two HTTP endpoints that can be used to send messages to 
   - /gpt-creator/flow/inbound-api
   - /gpt-creator/flow/inbound-api-callback
 
-check the omnia_sdk/examples/http_api_example.py for more details
+check the omnia_sdk/examples/http_api_example.py for more details.
+
 note: these urls are temporary and will be changed in the future
 
 ## Logs
-
 TODO
+
