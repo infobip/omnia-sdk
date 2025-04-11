@@ -4,7 +4,7 @@ import requests
 
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE
-from omnia_sdk.workflow.logging.logging import omnia_logger
+from omnia_sdk.workflow.omnia_logging.omnia_logging import omnia_logger
 from omnia_sdk.workflow.tools.channels import config as channels_config
 from omnia_sdk.workflow.tools.channels._context import add_response, set_session_id
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request

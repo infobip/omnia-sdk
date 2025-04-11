@@ -6,7 +6,6 @@ from omnia_sdk.workflow.langgraph.chatbot.langgraph_commands import AbstractComm
 """
 This decorator ensures that LangGraph will checkpoint state with specified memory saver without requiring user to explicitly
 add return state to every node function.
-Adding return with deltas is both tedious and error prone.
 We mutate state in-place and perform identity reduction after each node execution automatically.
 """
 

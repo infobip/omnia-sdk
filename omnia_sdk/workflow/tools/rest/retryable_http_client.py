@@ -3,7 +3,7 @@ import time
 from requests import Response
 
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE
-from omnia_sdk.workflow.logging.logging import omnia_logger
+from omnia_sdk.workflow.omnia_logging.omnia_logging import omnia_logger
 from omnia_sdk.workflow.tools.rest.exceptions import ApplicationError, UserRequestError
 
 READ_TIMEOUT_SECONDS = 35
