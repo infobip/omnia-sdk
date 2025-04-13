@@ -22,10 +22,29 @@ Code can be deployed using the:
 
 Expected files in the zip file:
 
-- project directory with source code
+- project directory with source code and yaml files
 - chatbot_configuration.yaml (mandatory)
 - translation_table.yaml (optional)
 - build.yaml (optional)
+
+2 options are supported right now, we will make it more flexible in the future:
+
+#### With python package root
+- package_root_directory:
+  - graph.py
+  - chatbot_configuration.yaml
+  - translation_table.yaml
+  - build.yaml
+  - other_python_packages
+
+#### With project directory
+- project_directory:
+  - package_root_directory:
+    - graph.py
+    - chatbot_configuration.yaml
+    - translation_table.yaml
+    - build.yaml
+    - other_python_packages
 
 ## How to use
 
@@ -62,13 +81,15 @@ sender/channel combinations.
 
 Built workflows will receive traffic via Infobip's OmniChannel API from all supported channels
 Additionally, there are two HTTP endpoints that can be used to send messages to the workflow:
-  - /gpt-creator/flow/inbound-api
-  - /gpt-creator/flow/inbound-api-callback
+
+- /gpt-creator/flow/inbound-api
+- /gpt-creator/flow/inbound-api-callback
 
 check the omnia_sdk/examples/http_api_example.py for more details.
 
 note: these urls are temporary and will be changed in the future
 
 ## Logs
+
 TODO
 
