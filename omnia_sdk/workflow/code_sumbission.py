@@ -12,11 +12,14 @@ build_workflow_url = f'{INFOBIP_BASE_URL}/gpt-creator/flow/build-workflow'
 def submit_workflow(directory_path: str, workflow_name: str) -> None:
     """
     This method submits your code workflow to the Infobip platform.
+    Currently, custom dependencies are not supported, so make sure to use only the ones from omnia-sdk.
+    In the future, we plan to add support for custom dependencies.
+
     :param directory_path: path to the root directory with your code workflow
     :param workflow_name: name of the workflow, reuse the name for same project
     """
     zip_buffer = _make_zip_in_memory(directory_path)
-    headers = {'workflow-name': workflow_name, "Authorization": f"App {INFOBIP_API_KEY}", 'chid': 'laqo'}
+    headers = {'workflow-name': workflow_name, "Authorization": f"App {INFOBIP_API_KEY}"}
     response = requests.post(build_workflow_url, headers=headers, files={'workflow_data': zip_buffer})
     print("Status Code:", response.status_code)
     print("Response:", response.text)

@@ -30,21 +30,27 @@ Expected files in the zip file:
 2 options are supported right now, we will make it more flexible in the future:
 
 #### With python package root
-- package_root_directory:
-  - graph.py
-  - chatbot_configuration.yaml
-  - translation_table.yaml
-  - build.yaml
-  - other_python_packages
 
-#### With project directory
-- project_directory:
-  - package_root_directory:
+- package_root_directory:
     - graph.py
     - chatbot_configuration.yaml
     - translation_table.yaml
     - build.yaml
     - other_python_packages
+
+#### With project directory
+
+- project_directory:
+    - package_root_directory:
+        - graph.py
+        - chatbot_configuration.yaml
+        - translation_table.yaml
+        - build.yaml
+        - other_python_packages
+
+##### Custom dependencies
+
+Currently custom dependencies are not supported, please use those available in the SDK.
 
 ## How to use
 
