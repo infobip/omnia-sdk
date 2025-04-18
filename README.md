@@ -27,7 +27,7 @@ Expected files in the zip file:
 - translation_table.yaml (optional)
 - build.yaml (optional)
 
-2 options are supported right now, we will make it more flexible in the future:
+2 options are supported right now, we will make it more flexible in the future.
 
 #### With python package root
 
@@ -97,5 +97,14 @@ note: these urls are temporary and will be changed in the future
 
 ## Logs
 
-TODO
+You can access workflow logs via REST endpoints. Check example in get_logs.py.
+You should be able to use logging via standard logging idiom in python:
 
+```python
+import logging as log
+```
+or
+```python
+import logging
+```
+Workflow server will ensure that logging is properly configured when you submit the workflow.

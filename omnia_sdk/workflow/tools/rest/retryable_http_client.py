@@ -1,9 +1,9 @@
+import logging as log
 import time
 
 from requests import Response
 
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE
-from omnia_sdk.workflow.omnia_logging.omnia_logging import omnia_logger
 from omnia_sdk.workflow.tools.rest.exceptions import ApplicationError, UserRequestError
 
 READ_TIMEOUT_SECONDS = 35
@@ -35,7 +35,7 @@ def retryable_request(config, x, decode_json: bool = True, **kwargs) -> dict | b
             response: Response = x(**kwargs)
         # this will most of the time correspond to timeout error
         except Exception as most_likely_timeout:
-            omnia_logger.error(str(most_likely_timeout))
+            log.error(str(most_likely_timeout))
             time.sleep(_backoff_seconds)
             attempts.append({"error": str(most_likely_timeout)})
             continue
@@ -58,7 +58,7 @@ def retryable_request(config, x, decode_json: bool = True, **kwargs) -> dict | b
 
 
 def _log_error(config, kwargs, response, error_type: str = "user"):
-    omnia_logger.error(
+    log.error(
         f"url: {kwargs.get('url')}\nrequest info: {_logging_details(config)}\n request failed due to {error_type} error with status code: "
         f"{response.status_code}.\n response: {response.text}"
     )

@@ -24,6 +24,20 @@ def submit_workflow(directory_path: str, workflow_name: str) -> None:
     print("Status Code:", response.status_code)
     print("Response:", response.text)
 
+def get_workflows() -> list[str]:
+    """
+    This method retrieves the list of workflows that you have already submitted.
+    :return: list of workflow names
+    """
+    url = f"{INFOBIP_BASE_URL}/gpt-creator/flow/workflows"
+    headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print("Failed to retrieve workflows:", response.status_code, response.text)
+        return []
+
 
 def _make_zip_in_memory(dir_path: str) -> BytesIO:
     memory_file = BytesIO()
@@ -41,3 +55,4 @@ def _make_zip_in_memory(dir_path: str) -> BytesIO:
 
 if __name__ == '__main__':
     submit_workflow(directory_path="<your_project>", workflow_name="<your_workflow_name>")
+    print(f"Available workflows: {get_workflows()}")

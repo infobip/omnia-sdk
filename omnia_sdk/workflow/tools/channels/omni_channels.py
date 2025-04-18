@@ -1,10 +1,10 @@
+import logging as log
 from collections import namedtuple
 
 import requests
 
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE
-from omnia_sdk.workflow.omnia_logging.omnia_logging import omnia_logger
 from omnia_sdk.workflow.tools.channels import config as channels_config
 from omnia_sdk.workflow.tools.channels._context import add_response, set_session_id
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
@@ -98,30 +98,27 @@ def _send_to_channel(content: dict, config: dict):
     configurable = config[CONFIGURABLE]
     channel = configurable[CHANNEL]
     if channel == CONSOLE:
-        omnia_logger.info(f"Sending content to console:\n{content}")
+        log.info(f"Sending content to console:\n{content}")
         return
-    try:
-        if channel == HTTP:
-            callback_url = configurable.get("callback_url")
-            # asynchronous HTTP communication if user specified callback url
-            if callback_url:
-                headers = {
-                    "session-id": configurable["thread_id"],
-                    "message-id": configurable["message_id"],
-                    "user-id": configurable["user_id"],
-                    "flow-id": configurable["flow_id"],
-                    }
-                _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
-            # collect response for synchronous HTTP communication
-            else:
-                add_response(response=content)
-                set_session_id(session_id=configurable["thread_id"])
-        # deliver message to OTT Gateway
+    if channel == HTTP:
+        callback_url = configurable.get("callback_url")
+        # asynchronous HTTP communication if user specified callback url
+        if callback_url:
+            headers = {
+                "session-id": configurable["thread_id"],
+                "message-id": configurable["message_id"],
+                "user-id": configurable["user_id"],
+                "flow-id": configurable["flow_id"],
+                }
+            _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
+        # collect response for synchronous HTTP communication
         else:
-            _send_messages(config=config, content=content, channel=channel)
+            add_response(response=content)
+            set_session_id(session_id=configurable["thread_id"])
+    # deliver message to OTT Gateway
+    else:
+        _send_messages(config=config, content=content, channel=channel)
     # if this results with an error, Infobip and/or META teams are already working on the issue
-    except Exception as e:
-        omnia_logger.error(e)
 
 
 # sends a message to the channel in which user started communication
