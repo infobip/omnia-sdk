@@ -53,7 +53,7 @@ def _prepare_workflow(workflow_name: str) -> str:
     return workflow_id
 
 
-def get_workflow_id(workflow_name: str) -> str:
+def get_workflow_id(workflow_name: str) -> str | None:
     """
     Returns uuid for workflow with the workflow_name, raises ValueError if there is no workflow with this name.
     """
@@ -62,7 +62,7 @@ def get_workflow_id(workflow_name: str) -> str:
     if response.status_code == 200:
         return response.json().get("workflowId")
     else:
-        raise ValueError(f"Failed to get workflow id: {response.status_code}\n{response.text}")
+        return None
 
 
 def create_workflow(workflow_name: str) -> str:
