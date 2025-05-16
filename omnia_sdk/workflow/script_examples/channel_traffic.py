@@ -1,6 +1,6 @@
 import requests
 
-from omnia_sdk.workflow.script_examples.code_sumbission import get_workflows, get_workflow_id
+from omnia_sdk.workflow.script_examples.code_sumbission import get_workflows
 from omnia_sdk.workflow.tools.channels.config import INFOBIP_API_KEY
 
 url = "https://api-ny2.infobip.com/workflows/manage/workflow-channel"
@@ -20,7 +20,7 @@ def register_channel_for_workflow(workflow_id: str, channel_id: str, channel: st
     print(resp.json())
 
 
-def delete_channel_for_workflow(workflow_id: str, channel_id: str, channel: str, use_conversations: bool = False):
+def delete_channel_for_workflow(workflow_id: str, channel_id: str, channel: str, use_conversations: bool = True):
     """
     Deletes the channel from workflow and stops routing traffic to it. Traffic will be routed back to Conversations.
     :param workflow_id: Id of the workflow
