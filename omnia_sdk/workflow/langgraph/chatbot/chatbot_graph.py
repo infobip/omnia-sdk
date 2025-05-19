@@ -8,7 +8,11 @@ from langgraph.graph import StateGraph
 from langgraph.types import Command, interrupt
 
 from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguration
-from omnia_sdk.workflow.chatbot.chatbot_state import ChatbotState, ConversationCycle, Message
+from omnia_sdk.workflow.chatbot.chatbot_state import (
+    ChatbotState,
+    ConversationCycle,
+    Message,
+)
 from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
     CONFIGURABLE,
@@ -19,6 +23,7 @@ from omnia_sdk.workflow.chatbot.constants import (
     USER,
 )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
+from omnia_sdk.workflow.tools.answers._context import set_flow_final_state
 from omnia_sdk.workflow.tools.channels.omni_channels import (
     BUTTON_REPLY,
     ButtonDefinition,
@@ -26,7 +31,9 @@ from omnia_sdk.workflow.tools.channels.omni_channels import (
     get_outbound_text_format,
     send_message,
 )
-from omnia_sdk.workflow.tools.localization.cpaas_translation_table import CPaaSTranslationTable
+from omnia_sdk.workflow.tools.localization.cpaas_translation_table import (
+    CPaaSTranslationTable,
+)
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
 
 """
@@ -488,3 +495,15 @@ class ChatbotFlow(ABC):
         :param message: user message
         """
         ChatbotFlow.get_current_cycle(state=state).messages.append(message)
+    
+    @staticmethod
+    def transfer_to_answers(final_state: dict) -> None:
+        """
+        This method is used to transfer the session back to Answers chatbot.
+
+        IMPORTANT!
+        This should be the last method invoked in the graph.
+
+        :param final_state: state that will be transferred to Answers chatbot
+        """
+        set_flow_final_state(final_state)
