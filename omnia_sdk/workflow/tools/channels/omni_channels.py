@@ -114,7 +114,6 @@ def _send_to_channel(content: dict, config: dict):
         # collect response for synchronous HTTP communication
         else:
             add_response(response=content)
-            set_session_id(session_id=configurable["thread_id"])
     # deliver message to OTT Gateway
     else:
         _send_messages(config=config, content=content, channel=channel)
