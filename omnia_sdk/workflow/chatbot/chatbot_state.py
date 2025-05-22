@@ -1,7 +1,8 @@
 import dataclasses
-from typing import Literal
 
 from typing_extensions import TypedDict
+
+from omnia_sdk.workflow.chatbot.constants import TYPE, TEXT, PAYLOAD, BUTTON_REPLY
 
 """
 This module contains dataclasses for chatbot state management.
@@ -11,11 +12,19 @@ This module contains dataclasses for chatbot state management.
 @dataclasses.dataclass
 class Message:
     """
-    Represent inbound or outbound message. Content corresponds to channel message format.
-    ChatbotGraphFlow has utilities to extract and interpret message object.
+    Represents inbound or outbound message.
+    Role should be one of: user, assistant, tool.
+    Content corresponds to channel message format e.g. {"type": "TEXT", "text": "Hi"}
     """
-    role: Literal["user", "assistant"]
+    role: str
     content: dict
+
+    def get_text(self):
+        if self.content[TYPE] == TEXT.upper():
+            return self.content[TEXT]
+        if self.content[TYPE] == BUTTON_REPLY:
+            return self.content[PAYLOAD]
+        return None
 
 
 # every time users completes a flow and comes back to <start> node, we create a new conversation cycle

@@ -6,14 +6,13 @@ import requests
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE
 from omnia_sdk.workflow.tools.channels import config as channels_config
-from omnia_sdk.workflow.tools.channels._context import add_response, set_session_id
+from omnia_sdk.workflow.tools.channels._context import add_response
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
 
 BUSINESS_NUMBER = "business_number"
 END_USER_NUMBER = "end_user_number"
 CHANNEL = "channel"
 HTTP = "HTTP"
-BUTTON_REPLY = "BUTTON_REPLY"
 CONSOLE = "CONSOLE"
 POSTBACK_DATA = "postbackData"
 
