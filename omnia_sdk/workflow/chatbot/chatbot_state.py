@@ -14,7 +14,7 @@ class Message:
     """
     Represents inbound or outbound message.
     Role should be one of: user, assistant, tool.
-    Content corresponds to channel message format e.g. {"type": "TEXT", "text": "Hi"}
+    Content corresponds to channel message format e.g. {"type": "TEXT", "text": "Hi"} TODO: add link to docs
     """
     role: str
     content: dict
@@ -25,6 +25,10 @@ class Message:
         if self.content[TYPE] == BUTTON_REPLY:
             return self.content[PAYLOAD]
         return None
+
+    @staticmethod
+    def get_message(role: str, text: str) -> 'Message':
+        return Message(role=role, content={TYPE: TEXT.upper(), TEXT: text})
 
 
 # every time users completes a flow and comes back to <start> node, we create a new conversation cycle
