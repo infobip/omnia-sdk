@@ -20,10 +20,13 @@ class Message:
     content: dict
 
     def get_text(self):
-        if self.content[TYPE] == TEXT.upper():
-            return self.content[TEXT]
-        if self.content[TYPE] == BUTTON_REPLY:
-            return self.content[PAYLOAD]
+        content = self.content
+        if "body" in content:
+            content = content["body"]
+        if content[TYPE] == TEXT.upper():
+            return content[TEXT]
+        if content[TYPE] == BUTTON_REPLY:
+            return content[PAYLOAD]
         return None
 
     @staticmethod

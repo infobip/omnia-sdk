@@ -1,3 +1,6 @@
+import asyncio
+from typing import Any
+
 import requests
 from openai import OpenAI
 from openai.types.chat import ChatCompletion
@@ -13,7 +16,8 @@ default_headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
 openai_client = OpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
 
 
-def chat_completions(messages: list[dict], model: str = None, extract_params: bool = False, **chat_completions_params) -> ChatCompletion:
+def chat_completions(messages: list, model: str = None, extract_params: bool = False,
+                     **chat_completions_params) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint which should be 1/1 compatible with OpenAI's chat completions endpoint.
     User may also specify Gemini models and we will use Gemini with OpenAI compatible API.
@@ -30,7 +34,7 @@ def chat_completions(messages: list[dict], model: str = None, extract_params: bo
     try:
         return openai_client.chat.completions.create(
             messages=messages, model=model, extra_body={"extract_params": extract_params}, **chat_completions_params
-        )
+            )
     except Exception as e:
         raise ApplicationError(code=500, message=str(e))
 
@@ -85,7 +89,7 @@ def chat_session(config: dict, chat_session_request: ChatSessionRequest) -> Chat
         "memory_key": chat_session_request.memory_key,
         "extract_params": chat_session_request.extract_params,
         **chat_session_request.chat_completions_params,
-    }
+        }
     url = f"{INFOBIP_BASE_URL}/gpt-creator/omnia/chat-session"
     response_body = retryable_request(x=requests.post, config=config, url=url, json=body, headers=headers)
     return ChatSessionResponse(**response_body)
@@ -104,3 +108,41 @@ def detect_intent(config: dict, intent_instruction: IntentInstruction) -> str:
     url = f"{INFOBIP_BASE_URL}/gpt-creator/omnia/2/intent"
     response_body = retryable_request(x=requests.post, config=config, url=url, json=intent_instruction.model_dump(), headers=headers)
     return response_body["response"]
+
+
+async def chat_completions_async(messages: list, model: str = None, extract_params: bool = False,
+                                 **chat_completions_params) -> ChatCompletion:
+    try:
+        return await openai_client.chat.completions.create(
+            messages=messages,
+            model=model,
+            extra_body={"extract_params": extract_params},
+            **chat_completions_params
+            )
+    except Exception as e:
+        raise ApplicationError(code=500, message=str(e))
+
+
+async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]]) -> list[ChatCompletion]:
+    """
+    Run multiple chat completion requests concurrently.
+
+    Each request dict should include:
+        - messages: list
+        - model: str
+        - extract_params: bool (optional)
+        - any other OpenAI-like completion params
+
+    Returns:
+        List of ChatCompletion objects, in the same order as the requests.
+    """
+    tasks = [
+        chat_completions_async(
+            messages=req["messages"],
+            model=req.get("model"),
+            extract_params=req.get("extract_params", False),
+            **{k: v for k, v in req.items() if k not in {"messages", "model", "extract_params"}}
+            )
+        for req in chat_completion_requests
+        ]
+    return await asyncio.gather(*tasks, return_exceptions=True)
