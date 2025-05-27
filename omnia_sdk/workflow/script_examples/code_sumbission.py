@@ -9,9 +9,11 @@ from omnia_sdk.workflow.tools.channels.config import INFOBIP_BASE_URL, INFOBIP_A
 build_workflow_url = f'{INFOBIP_BASE_URL}/workflows/build-workflow'
 headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
 _manage_workflows_url = f"{INFOBIP_BASE_URL}/workflows/manage"
+RESET_POLICY = "RESET"
+GRACEFUL_POLICY = "GRACEFUL"
 
 
-def submit_workflow(directory_path: str, workflow_id: str) -> None:
+def submit_workflow(directory_path: str, workflow_id: str, session_policy: str = RESET_POLICY) -> None:
     """
     This method submits your code workflow to the Infobip platform.
     Currently, custom dependencies are not supported, so make sure to use only the ones from omnia-sdk.
@@ -19,9 +21,13 @@ def submit_workflow(directory_path: str, workflow_id: str) -> None:
 
     :param directory_path: path to the root directory with your code workflow
     :param workflow_id: unique id for the workflow, can be resolved from name
+    :param session_policy: policy for handling existing sessions after submitting new workflow.
+                           RESET: existing sessions are terminated and started on new workflow version.
+                           GRACEFUL: existing sessions continue to run on old workflow version for max 25 min,
+                           new sessions start on new workflow version.
     """
     zip_buffer = _make_zip_in_memory(directory_path)
-    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}"}
+    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}", "session-policy": session_policy}
     response = requests.post(build_workflow_url, headers=_headers, files={'workflow_data': zip_buffer})
     print("Status Code:", response.status_code)
     print("Response:", response.text)
@@ -107,4 +113,3 @@ if __name__ == '__main__':
     submit_workflow(directory_path="<project_root_directory>", workflow_id=workflow_uuid)
     # you should rename the workflow rather than creating a new one to change the name
     # _rename_workflow(workflow_id='<>', new_name='foo')
-
