@@ -12,28 +12,24 @@ from omnia_sdk.workflow.chatbot.chatbot_state import (
     ChatbotState,
     ConversationCycle,
     Message,
-)
+    )
 from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
     CONFIGURABLE,
     LANGUAGE,
-    PAYLOAD,
-    TEXT,
-    TYPE,
     USER,
-)
+    )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
 from omnia_sdk.workflow.tools.answers._context import set_flow_final_state
 from omnia_sdk.workflow.tools.channels.omni_channels import (
-    BUTTON_REPLY,
     ButtonDefinition,
     get_outbound_buttons_format,
     get_outbound_text_format,
     send_message,
-)
+    )
 from omnia_sdk.workflow.tools.localization.cpaas_translation_table import (
     CPaaSTranslationTable,
-)
+    )
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
 
 """
@@ -307,34 +303,6 @@ class ChatbotFlow(ABC):
         return None
 
     @staticmethod
-    def get_user_message_text(state: State) -> str | None:
-        """
-        Returns last user message text from current conversation cycle.
-        If last message is not text message, None will be returned.
-
-        :param state: from which to return the user's message text
-        :return: the last user message text or None if last message is not text message
-        """
-        user_message = ChatbotFlow.get_user_message(state=state)
-        if user_message.content[TYPE] != TEXT.upper():
-            return None
-        return user_message.content[TEXT]
-
-    @staticmethod
-    def get_user_message_button_payload(state: State) -> dict:
-        """
-        Returns last user message button payload from current conversation cycle.
-        If last message is not button message, None will be returned.
-
-        :param state: from which to return the user's message button payload
-        :return: the last user message button payload or None if last message is not button message
-        """
-        user_message = ChatbotFlow.get_user_message(state=state)
-        if user_message.content[TYPE] != BUTTON_REPLY:
-            return {}
-        return {PAYLOAD: user_message.content[PAYLOAD], TEXT: user_message.content[TEXT]}
-
-    @staticmethod
     def get_last_message(state: State) -> Message:
         """
         Returns the last user or AI message from the current conversation cycle in the state.
@@ -384,7 +352,7 @@ class ChatbotFlow(ABC):
         return state[CHATBOT_STATE][CONVERSATION_CYCLES]
 
     @staticmethod
-    def get_variable(state: State, name: str) -> str:
+    def get_variable(state: State, name: str) -> Any:
         """
         Returns user defined variable saved in the state.
 
@@ -402,7 +370,7 @@ class ChatbotFlow(ABC):
         return state[CHATBOT_STATE][VARIABLES]
 
     @staticmethod
-    def get_session_id(config):
+    def get_session_id(config) -> str:
         return config[CONFIGURABLE][THREAD_ID]
 
     @staticmethod
@@ -470,12 +438,9 @@ class ChatbotFlow(ABC):
             config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[CONFIGURABLE] else state[CHATBOT_STATE][_user_language]
         )
         ChatbotFlow.save_message(state=state, message=message)
-        payload_extractors = [ChatbotFlow.get_user_message_text(state),
-                              ChatbotFlow.get_user_message_button_payload(state).get(PAYLOAD)]
-        variable = next((x for x in payload_extractors if x), None)
         if variable_name:
-            ChatbotFlow.save_variable(name=variable_name, value=extractor(variable), state=state)
-        return extractor(variable)
+            ChatbotFlow.save_variable(name=variable_name, value=extractor(message.get_text()), state=state)
+        return extractor(message.get_text())
 
     @staticmethod
     def save_variable(name: str, value: Any, state: State) -> None:
@@ -495,7 +460,7 @@ class ChatbotFlow(ABC):
         :param message: user message
         """
         ChatbotFlow.get_current_cycle(state=state).messages.append(message)
-    
+
     @staticmethod
     def transfer_to_answers(final_state: dict) -> None:
         """
