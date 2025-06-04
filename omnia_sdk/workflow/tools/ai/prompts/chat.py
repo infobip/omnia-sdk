@@ -1,5 +1,8 @@
+import asyncio
+from typing import Any
+
 import requests
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE
@@ -11,6 +14,8 @@ from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_reques
 default_headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
 
 openai_client = OpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
+openai_client_async = AsyncOpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
+
 
 
 def chat_completions(messages: list, model: str = None, extract_params: bool = False,
@@ -34,6 +39,58 @@ def chat_completions(messages: list, model: str = None, extract_params: bool = F
             )
     except Exception as e:
         raise ApplicationError(code=500, message=str(e))
+
+
+async def chat_completions_async(messages: list, model: str = None, extract_params: bool = False,
+                                 **chat_completions_params) -> ChatCompletion:
+    """
+    Sends request to Infobip's chat completions endpoint asynchronously, returning coroutine.
+    See chat_completions pydocs for API details.
+    """
+    try:
+        return await openai_client_async.chat.completions.create(
+            messages=messages,
+            model=model,
+            extra_body={"extract_params": extract_params},
+            **chat_completions_params
+            )
+    except Exception as e:
+        raise ApplicationError(code=500, message=str(e))
+
+
+async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]]) -> list[ChatCompletion]:
+    """
+    Run multiple chat completion requests concurrently.
+    This invocation should be wrapped with asyncio.run() to generate event loop as the runtime environment is synchronous.
+
+    Example invocation:
+        import asyncio
+        ...
+        cats = [{"role": "user","content": "Tell me joke about cats"}]
+        dogs = [{"role": "user","content": "Tell me joke about dogs"}]
+        tasks = [{'messages': cats}, {'messages': dogs}]
+        foo = asyncio.run(batch_chat_completions(chat_completion_requests=tasks))
+        print([f.choices[0].message.content for f in foo])
+
+    Each request dict should include:
+        - messages: list
+        - model: str
+        - extract_params: bool (optional)
+        - any other OpenAI-like completion params
+
+
+    return: List of ChatCompletion objects, in the same order as the requests.
+    """
+    tasks = [
+        chat_completions_async(
+            messages=req["messages"],
+            model=req.get("model"),
+            extract_params=req.get("extract_params", False),
+            **{k: v for k, v in req.items() if k not in {"messages", "model", "extract_params"}}
+            )
+        for req in chat_completion_requests
+        ]
+    return await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def chat_session(config: dict, chat_session_request: ChatSessionRequest) -> ChatSessionResponse:
