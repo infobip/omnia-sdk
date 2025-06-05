@@ -16,6 +16,7 @@ HTTP = "HTTP"
 CONSOLE = "CONSOLE"
 POSTBACK_DATA = "postbackData"
 CALLBACK_URL = "callback_url"
+BODY = "body"
 
 messages_url = f"{channels_config.INFOBIP_BASE_URL}/messages-api/1/messages"
 
@@ -36,7 +37,7 @@ def get_outbound_text_format(text: str) -> dict:
     :param text: to send
     :return: message content in Messages API format
     """
-    return {"body": {TYPE: TEXT.upper(), TEXT: text}}
+    return {BODY: {TYPE: TEXT.upper(), TEXT: text}}
 
 
 def get_outbound_buttons_format(text: str, buttons: list[ButtonDefinition]) -> dict:
@@ -48,7 +49,7 @@ def get_outbound_buttons_format(text: str, buttons: list[ButtonDefinition]) -> d
     :return: message content in Messages API format
     """
     return {
-        "body": {TYPE: TEXT.upper(), TEXT: text},
+        BODY: {TYPE: TEXT.upper(), TEXT: text},
         "buttons": [{TYPE: button.type, TEXT: button.text, POSTBACK_DATA: button.postback_data} for button in buttons],
         }
 
@@ -103,9 +104,9 @@ def _send_to_channel(content: dict, config: dict):
     # we add outbound content to the request state
     add_response(response=content)
     if channel == HTTP:
-        if CALLBACK_URL not in configurable:
-            return
         callback_url = configurable.get(CALLBACK_URL)
+        if not callback_url:
+            return
         # asynchronous HTTP communication if user specified callback url
         headers = {
             "session-id": configurable["thread_id"],
