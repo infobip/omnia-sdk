@@ -15,6 +15,7 @@ CHANNEL = "channel"
 HTTP = "HTTP"
 CONSOLE = "CONSOLE"
 POSTBACK_DATA = "postbackData"
+CALLBACK_URL = "callback_url"
 
 messages_url = f"{channels_config.INFOBIP_BASE_URL}/messages-api/1/messages"
 
@@ -99,20 +100,20 @@ def _send_to_channel(content: dict, config: dict):
     if channel == CONSOLE:
         log.info(f"Sending content to console:\n{content}")
         return
+    # we add outbound content to the request state
+    add_response(response=content)
     if channel == HTTP:
-        callback_url = configurable.get("callback_url")
+        if CALLBACK_URL not in configurable:
+            return
+        callback_url = configurable.get(CALLBACK_URL)
         # asynchronous HTTP communication if user specified callback url
-        if callback_url:
-            headers = {
-                "session-id": configurable["thread_id"],
-                "message-id": configurable["message_id"],
-                "user-id": configurable["user_id"],
-                "flow-id": configurable["flow_id"],
-                }
-            _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
-        # collect response for synchronous HTTP communication
-        else:
-            add_response(response=content)
+        headers = {
+            "session-id": configurable["thread_id"],
+            "message-id": configurable["message_id"],
+            "user-id": configurable["user_id"],
+            "flow-id": configurable["flow_id"],
+            }
+        _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
     # deliver message to OTT Gateway
     else:
         _send_messages(config=config, content=content, channel=channel)
