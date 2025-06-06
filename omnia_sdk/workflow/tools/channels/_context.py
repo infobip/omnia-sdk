@@ -1,11 +1,11 @@
 from contextvars import ContextVar
 
 """
-This variable is used to track state for synchronous HTTP Requests to chatbot.
+This variable is used to track state of message requests to chatbot.
 These methods are used by runtime environment, user should never call these directly.
 """
 
-_api_request = ContextVar("http_context", default=[])
+_api_request = ContextVar("outbound_context", default=[])
 _session_id = ContextVar("chatbot_session", default="")
 
 
@@ -27,6 +27,5 @@ def get_session_id() -> str:
     return _session_id.get()
 
 
-def reset():
+def reset_responses():
     _api_request.set([])
-    _session_id.set("")

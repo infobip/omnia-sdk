@@ -15,6 +15,8 @@ CHANNEL = "channel"
 HTTP = "HTTP"
 CONSOLE = "CONSOLE"
 POSTBACK_DATA = "postbackData"
+CALLBACK_URL = "callback_url"
+BODY = "body"
 
 messages_url = f"{channels_config.INFOBIP_BASE_URL}/messages-api/1/messages"
 
@@ -35,7 +37,7 @@ def get_outbound_text_format(text: str) -> dict:
     :param text: to send
     :return: message content in Messages API format
     """
-    return {"body": {TYPE: TEXT.upper(), TEXT: text}}
+    return {BODY: {TYPE: TEXT.upper(), TEXT: text}}
 
 
 def get_outbound_buttons_format(text: str, buttons: list[ButtonDefinition]) -> dict:
@@ -47,7 +49,7 @@ def get_outbound_buttons_format(text: str, buttons: list[ButtonDefinition]) -> d
     :return: message content in Messages API format
     """
     return {
-        "body": {TYPE: TEXT.upper(), TEXT: text},
+        BODY: {TYPE: TEXT.upper(), TEXT: text},
         "buttons": [{TYPE: button.type, TEXT: button.text, POSTBACK_DATA: button.postback_data} for button in buttons],
         }
 
@@ -99,20 +101,20 @@ def _send_to_channel(content: dict, config: dict):
     if channel == CONSOLE:
         log.info(f"Sending content to console:\n{content}")
         return
+    # we add outbound content to the request state
+    add_response(response=content)
     if channel == HTTP:
-        callback_url = configurable.get("callback_url")
+        callback_url = configurable.get(CALLBACK_URL)
+        if not callback_url:
+            return
         # asynchronous HTTP communication if user specified callback url
-        if callback_url:
-            headers = {
-                "session-id": configurable["thread_id"],
-                "message-id": configurable["message_id"],
-                "user-id": configurable["user_id"],
-                "flow-id": configurable["flow_id"],
-                }
-            _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
-        # collect response for synchronous HTTP communication
-        else:
-            add_response(response=content)
+        headers = {
+            "session-id": configurable["thread_id"],
+            "message-id": configurable["message_id"],
+            "user-id": configurable["user_id"],
+            "flow-id": configurable["flow_id"],
+            }
+        _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
     # deliver message to OTT Gateway
     else:
         _send_messages(config=config, content=content, channel=channel)
