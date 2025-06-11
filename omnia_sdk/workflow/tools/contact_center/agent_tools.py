@@ -9,7 +9,8 @@ def is_holiday(country_code: str, date: datetime):
 
 
 def transfer_to_agent():
-    print('you have been transferred to agent')
+    # TODO: implement native integration with contact center
+    pass
 
 
 def time_aware_agent_transfer(country_code: str):

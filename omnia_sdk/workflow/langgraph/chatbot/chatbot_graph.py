@@ -17,10 +17,11 @@ from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
     CONFIGURABLE,
     LANGUAGE,
+    METADATA,
     USER,
     )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
-from omnia_sdk.workflow.tools.answers._context import set_flow_final_state
+from omnia_sdk.workflow.tools.answers._context import set_workflow_state
 from omnia_sdk.workflow.tools.channels.omni_channels import (
     ButtonDefinition,
     get_outbound_buttons_format,
@@ -372,6 +373,16 @@ class ChatbotFlow(ABC):
     @staticmethod
     def get_session_id(config) -> str:
         return config[CONFIGURABLE][THREAD_ID]
+    
+    @staticmethod
+    def get_metadata(config: dict) -> dict:
+        """
+        Returns metadata from the config.
+        
+        :param config: with session and channel details
+        :return: metadata dictionary
+        """
+        return config[CONFIGURABLE].get(METADATA, {})
 
     @staticmethod
     def send_text_response(text: str, state: State, config: dict):
@@ -462,13 +473,10 @@ class ChatbotFlow(ABC):
         ChatbotFlow.get_current_cycle(state=state).messages.append(message)
 
     @staticmethod
-    def transfer_to_answers(final_state: dict) -> None:
+    def return_to_answers(state: dict) -> None:
         """
-        This method is used to transfer the session back to Answers chatbot.
+        This method is used to return the session back to Answers chatbot.
 
-        IMPORTANT!
-        This should be the last method invoked in the graph.
-
-        :param final_state: state that will be transferred to Answers chatbot
+        :param state: state that will be returned to Answers chatbot
         """
-        set_flow_final_state(final_state)
+        set_workflow_state(state)
