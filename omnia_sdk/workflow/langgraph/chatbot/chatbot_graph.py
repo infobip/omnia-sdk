@@ -17,6 +17,7 @@ from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
     CONFIGURABLE,
     LANGUAGE,
+    METADATA,
     USER,
     )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
@@ -372,6 +373,16 @@ class ChatbotFlow(ABC):
     @staticmethod
     def get_session_id(config) -> str:
         return config[CONFIGURABLE][THREAD_ID]
+    
+    @staticmethod
+    def get_metadata(config: dict) -> dict:
+        """
+        Returns metadata from the config.
+        
+        :param config: with session and channel details
+        :return: metadata dictionary
+        """
+        return config[CONFIGURABLE].get(METADATA, {})
 
     @staticmethod
     def send_text_response(text: str, state: State, config: dict):
