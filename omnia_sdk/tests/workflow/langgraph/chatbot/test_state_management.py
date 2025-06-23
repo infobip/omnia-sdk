@@ -3,8 +3,8 @@ from langgraph.constants import END
 
 from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguration
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
-from omnia_sdk.workflow.chatbot.constants import ASSISTANT, CONFIGURABLE, TEXT, TYPE, USER
-from omnia_sdk.workflow.langgraph.chatbot.chatbot_graph import THREAD_ID, ChatbotFlow, State
+from omnia_sdk.workflow.chatbot.constants import ASSISTANT, CONFIGURABLE, TEXT, TYPE, USER, THREAD_ID
+from omnia_sdk.workflow.langgraph.chatbot.chatbot_graph import ChatbotFlow, State
 
 thread_id = "123"
 m1 = Message(role=USER, content={TYPE: TEXT.upper(), TEXT: "Hello from John Doe"})

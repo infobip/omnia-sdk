@@ -5,7 +5,8 @@ import requests
 from openai import OpenAI, AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE
+from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, THREAD_ID, WORKFLOW_ID, WORKFLOW_VERSION
+from omnia_sdk.workflow.tools.ai.constants import SESSION_ID_HEADER, WORKFLOW_ID_HEADER, WORKFLOW_VERSION_HEADER
 from omnia_sdk.workflow.tools.ai.llm_models import ChatSessionRequest, ChatSessionResponse, IntentInstruction
 from omnia_sdk.workflow.tools.channels.config import INFOBIP_API_KEY, INFOBIP_BASE_URL
 from omnia_sdk.workflow.tools.rest.exceptions import ApplicationError
@@ -17,9 +18,8 @@ openai_client = OpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omn
 openai_client_async = AsyncOpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
 
 
-
 def chat_completions(messages: list, model: str = None, extract_params: bool = False,
-                     **chat_completions_params) -> ChatCompletion:
+                     config: dict = None, **chat_completions_params) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint which should be 1/1 compatible with OpenAI's chat completions endpoint.
     User may also specify Gemini models and we will use Gemini with OpenAI compatible API.
@@ -30,19 +30,21 @@ def chat_completions(messages: list, model: str = None, extract_params: bool = F
     :param messages: OpenAI like messages list
     :param model: OpenAI or Gemini model
     :param extract_params: whether to extract params from llm response
+    :param config: channel and session details
     :param chat_completions_params: OpenAI like chat completions parameters
     :return: ChatCompletion model instance
     """
     try:
         return openai_client.chat.completions.create(
-            messages=messages, model=model, extra_body={"extract_params": extract_params}, **chat_completions_params
+            messages=messages, model=model, extra_headers=_prepare_headers(config), extra_body={"extract_params": extract_params},
+            **chat_completions_params
             )
     except Exception as e:
         raise ApplicationError(code=500, message=str(e))
 
 
 async def chat_completions_async(messages: list, model: str = None, extract_params: bool = False,
-                                 **chat_completions_params) -> ChatCompletion:
+                                 config: dict = None, **chat_completions_params) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint asynchronously, returning coroutine.
     See chat_completions pydocs for API details.
@@ -51,6 +53,7 @@ async def chat_completions_async(messages: list, model: str = None, extract_para
         return await openai_client_async.chat.completions.create(
             messages=messages,
             model=model,
+            extra_headers=_prepare_headers(config),
             extra_body={"extract_params": extract_params},
             **chat_completions_params
             )
@@ -58,7 +61,7 @@ async def chat_completions_async(messages: list, model: str = None, extract_para
         raise ApplicationError(code=500, message=str(e))
 
 
-async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]]) -> list[ChatCompletion]:
+async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]], config: dict = None) -> list[ChatCompletion]:
     """
     Run multiple chat completion requests concurrently.
     This invocation should be wrapped with asyncio.run() to generate event loop as the runtime environment is synchronous.
@@ -86,6 +89,7 @@ async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]])
             messages=req["messages"],
             model=req.get("model"),
             extract_params=req.get("extract_params", False),
+            config=config,
             **{k: v for k, v in req.items() if k not in {"messages", "model", "extract_params"}}
             )
         for req in chat_completion_requests
@@ -131,8 +135,7 @@ def chat_session(config: dict, chat_session_request: ChatSessionRequest) -> Chat
     :param chat_session_request: stateful chat completions request
     :return: ChatSessionResponse model instance
     """
-    session_id = config[CONFIGURABLE]["thread_id"]
-    headers = {"session-id": session_id} | default_headers
+    headers = _prepare_headers(config) | default_headers
     body = {
         "prompt": chat_session_request.prompt,
         "user_message": chat_session_request.user_message,
@@ -157,8 +160,18 @@ def detect_intent(config: dict, intent_instruction: IntentInstruction) -> str:
     :param intent_instruction: prompt instructions for GenAI intent detection
     :return: inferred intent, or ApplicationError in request failed after retries
     """
-    session_id = config[CONFIGURABLE]["thread_id"]
+    session_id = config[CONFIGURABLE][THREAD_ID]
     headers = {"session-id": session_id} | default_headers
     url = f"{INFOBIP_BASE_URL}/gpt-creator/omnia/2/intent"
     response_body = retryable_request(x=requests.post, config=config, url=url, json=intent_instruction.model_dump(), headers=headers)
     return response_body["response"]
+
+
+def _prepare_headers(config: dict | None) -> dict:
+    extra_headers = {
+        SESSION_ID_HEADER: config[CONFIGURABLE][THREAD_ID],
+        WORKFLOW_ID_HEADER: config[CONFIGURABLE].get(WORKFLOW_ID),
+        WORKFLOW_VERSION_HEADER: config[CONFIGURABLE].get(WORKFLOW_VERSION),
+        } if config else dict()
+    # only defined headers are returned as httpx raises on None headers
+    return {k: v for k, v in extra_headers.items() if v is not None}
