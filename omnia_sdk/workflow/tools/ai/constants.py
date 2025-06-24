@@ -1,3 +1,3 @@
-WORKFLOW_ID_HEADER = "workflow-id"
-WORKFLOW_VERSION_HEADER = "workflow-version"
-SESSION_ID_HEADER = "session-id"
+WORKFLOW_ID_HEADER = "X-Ib-Omnia-Workflow-Id"
+WORKFLOW_VERSION_HEADER = "X-Ib-Omnia-Workflow-Version"
+SESSION_ID_HEADER = "X-Ib-Omnia-Session-Id"

@@ -1,6 +1,7 @@
 import requests
 
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, THREAD_ID
+from omnia_sdk.workflow.tools.ai.constants import SESSION_ID_HEADER
 from omnia_sdk.workflow.tools.channels.config import INFOBIP_API_KEY, INFOBIP_BASE_URL
 from omnia_sdk.workflow.tools.rest.exceptions import ApplicationError
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
@@ -31,7 +32,7 @@ def assistant_response(message: str, assistant_id: str, config: dict, prompt_var
     raising  ApplicationError.
     """
     session_id = config[CONFIGURABLE][THREAD_ID]
-    headers = {"return-contexts": "true", "session-id": session_id, "assistant-id": assistant_id} | default_headers
+    headers = {"return-contexts": "true", SESSION_ID_HEADER: session_id, "assistant-id": assistant_id} | default_headers
     message = f"{message}\n{_get_local_language_instruction(lang_iso=language)}"
     body = {"message": message, "prompt_var": prompt_var, "context": context}
     try:

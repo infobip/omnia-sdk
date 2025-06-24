@@ -161,7 +161,7 @@ def detect_intent(config: dict, intent_instruction: IntentInstruction) -> str:
     :return: inferred intent, or ApplicationError in request failed after retries
     """
     session_id = config[CONFIGURABLE][THREAD_ID]
-    headers = {"session-id": session_id} | default_headers
+    headers = {SESSION_ID_HEADER: session_id} | default_headers
     url = f"{INFOBIP_BASE_URL}/gpt-creator/omnia/2/intent"
     response_body = retryable_request(x=requests.post, config=config, url=url, json=intent_instruction.model_dump(), headers=headers)
     return response_body["response"]
