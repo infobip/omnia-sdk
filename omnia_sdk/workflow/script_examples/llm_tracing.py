@@ -37,7 +37,7 @@ def get_session_tracing(session_id: str) -> list[dict]:
     :param session_id: unique identifier of the session
     :return: List of tracing information for the session
     """
-    url = f"{ai_reporting_url}/model_proxy_session/{session_id}"
+    url = f"{ai_reporting_url}/model_proxy_sessions/{session_id}"
     response = requests.get(url=url, headers=headers)
     if response.status_code == 200:
         return response.json()
