@@ -4,7 +4,7 @@ from collections import namedtuple
 import requests
 
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE
+from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE, WORKFLOW_ID, THREAD_ID
 from omnia_sdk.workflow.tools.channels import config as channels_config
 from omnia_sdk.workflow.tools.channels._context import add_response
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
@@ -109,10 +109,10 @@ def _send_to_channel(content: dict, config: dict):
             return
         # asynchronous HTTP communication if user specified callback url
         headers = {
-            "session-id": configurable["thread_id"],
+            "session-id": configurable[THREAD_ID],
             "message-id": configurable["message_id"],
             "user-id": configurable["user_id"],
-            "flow-id": configurable["flow_id"],
+            "workflow-id": configurable[WORKFLOW_ID],
             }
         _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
     # deliver message to OTT Gateway

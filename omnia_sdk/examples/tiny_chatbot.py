@@ -5,8 +5,8 @@ from langgraph.constants import END
 
 from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguration
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
-from omnia_sdk.workflow.chatbot.constants import ASSISTANT, CONFIGURABLE, TEXT, TYPE, USER
-from omnia_sdk.workflow.langgraph.chatbot.chatbot_graph import THREAD_ID, ChatbotFlow, State
+from omnia_sdk.workflow.chatbot.constants import ASSISTANT, CONFIGURABLE, TEXT, TYPE, USER, THREAD_ID
+from omnia_sdk.workflow.langgraph.chatbot.chatbot_graph import ChatbotFlow, State
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
 
 """

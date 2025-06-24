@@ -6,9 +6,9 @@ import requests
 
 from omnia_sdk.workflow.tools.channels.config import INFOBIP_BASE_URL, INFOBIP_API_KEY
 
-build_workflow_url = f'{INFOBIP_BASE_URL}/workflows/build-workflow'
 headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
-_manage_workflows_url = f"{INFOBIP_BASE_URL}/workflows/manage"
+build_workflow_url = f'{INFOBIP_BASE_URL}/workflows/build-workflow'
+manage_workflows_url = f"{INFOBIP_BASE_URL}/workflows/manage"
 RESET_POLICY = "RESET"
 GRACEFUL_POLICY = "GRACEFUL"
 
@@ -38,12 +38,29 @@ def get_workflows() -> list[str]:
     This method retrieves the list of workflows that you have already created.
     :return: List of workflows
     """
-    url = f"{_manage_workflows_url}/workflows"
+    url = f"{manage_workflows_url}/workflows"
     response = requests.get(url=url, headers=headers)
     if response.status_code == 200:
         return response.json()
     else:
         print("Failed to retrieve workflows:", response.status_code, response.text)
+        return []
+
+
+def get_workflows_versions(workflow_id: str = None) -> list[dict]:
+    """
+    This method retrieves list of workflow versions info. If workflow_id is not provided,
+    all workflows and their versions are returned.
+
+    :param workflow_id: The unique identifier of the workflow for which to retrieve versions info.
+    :return: List of workflow versions info
+    """
+    url = f"{manage_workflows_url}/workflows-versioning"
+    response = requests.get(url=url, params={'workflowId': workflow_id}, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print("Failed to retrieve workflow versions:", response.status_code, response.text)
         return []
 
 
@@ -63,7 +80,7 @@ def get_workflow_id(workflow_name: str) -> str | None:
     """
     Returns uuid for workflow with the workflow_name, raises ValueError if there is no workflow with this name.
     """
-    url = f"{_manage_workflows_url}/workflow"
+    url = f"{manage_workflows_url}/workflow"
     response = requests.get(url=url, params={'workflowName': workflow_name}, headers=headers)
     if response.status_code == 200:
         return response.json().get("workflowId")
@@ -75,7 +92,7 @@ def create_workflow(workflow_name: str) -> str:
     """
     Creates workflow with the given workflow_name, raises ValueError if the name is already used.
     """
-    url = f"{_manage_workflows_url}/workflow"
+    url = f"{manage_workflows_url}/workflow"
     response = requests.post(url=url, json={'workflowName': workflow_name}, headers=headers)
     if response.status_code == 201:
         return response.json()["workflowId"]
@@ -83,8 +100,14 @@ def create_workflow(workflow_name: str) -> str:
         raise ValueError(f"Failed to create workflow: {response.status_code}\n{response.text}")
 
 
-def _rename_workflow(current_name: str, new_name: str):
-    url = f"{_manage_workflows_url}/workflow-name"
+def rename_workflow(current_name: str, new_name: str):
+    """
+    Renames an existing workflow from current_name to new_name.
+
+    :param current_name: The current name of the workflow to be renamed.
+    :param new_name: The new name for the workflow.
+    """
+    url = f"{manage_workflows_url}/workflow-name"
     workflow_id = get_workflow_id(workflow_name=current_name)
     response = requests.put(url=url, params={'workflowId': workflow_id, 'workflowName': new_name}, headers=headers)
     if response.status_code != 200:
@@ -108,8 +131,13 @@ def _make_zip_in_memory(dir_path: str) -> BytesIO:
 
 if __name__ == '__main__':
     print(f"existing workflows: {get_workflows()}")
+
     # gets uuid of existing workflow, or creates new one if this is a new name
     workflow_uuid = _prepare_workflow("<your_workflow_name>")
     submit_workflow(directory_path="<project_root_directory>", workflow_id=workflow_uuid)
-    # you should rename the workflow rather than creating a new one to change the name
-    # _rename_workflow(workflow_id='<>', new_name='foo')
+
+    # you should rename workflow rather than creating a new one to change the name
+    # rename_workflow(current_name='<your_workflow_name>', new_name='foo')
+
+    # outputs all workflows and their versions
+    # print(get_workflows_versions())

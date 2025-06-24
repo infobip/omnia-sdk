@@ -18,7 +18,7 @@ from omnia_sdk.workflow.chatbot.constants import (
     CONFIGURABLE,
     LANGUAGE,
     METADATA,
-    USER,
+    USER, THREAD_ID,
     )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
 from omnia_sdk.workflow.tools.answers._context import set_workflow_state
@@ -63,7 +63,6 @@ Instead, use accessor methods in ChatbotGraph class to interact with the chatbot
 CHATBOT_STATE = "chatbot_state"
 VARIABLES = "variables"
 CONVERSATION_CYCLES = "conversation_cycles"
-THREAD_ID = "thread_id"
 _user_language = "user_language"
 
 
@@ -373,7 +372,7 @@ class ChatbotFlow(ABC):
     @staticmethod
     def get_session_id(config) -> str:
         return config[CONFIGURABLE][THREAD_ID]
-    
+
     @staticmethod
     def get_metadata(config: dict) -> dict:
         """
