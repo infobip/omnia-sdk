@@ -1,6 +1,6 @@
 import requests
 
-from omnia_sdk.workflow.script_examples.code_sumbission import get_workflows
+from omnia_sdk.workflow.script_examples.code_sumbission import get_workflows, get_workflows_versions
 from omnia_sdk.workflow.tools.channels.config import INFOBIP_BASE_URL, INFOBIP_API_KEY
 
 headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
@@ -37,7 +37,7 @@ def get_session_tracing(session_id: str) -> list[dict]:
     :param session_id: unique identifier of the session
     :return: List of tracing information for the session
     """
-    url = f"{ai_reporting_url}/model_proxy_sessions/{session_id}"
+    url = f"{ai_reporting_url}/model-proxy-sessions/{session_id}"
     response = requests.get(url=url, headers=headers)
     if response.status_code == 200:
         return response.json()
