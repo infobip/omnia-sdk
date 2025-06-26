@@ -213,14 +213,16 @@ def _prepare_headers(config: dict | None) -> dict:
     return {k: v for k, v in extra_headers.items() if v is not None}
 
 
-def _add_headers(google_config, config):
+def _add_headers(google_config: GenerateContentConfig, config: dict) -> GenerateContentConfig:
     headers = _prepare_headers(config)
     google_config = google_config or GenerateContentConfig()
+
     # Initialize http_options with headers if not present
     if not google_config.http_options:
         google_config.http_options = HttpOptions(headers=headers)
-    else:
-        # Merge headers with existing ones
-        existing_headers = google_config.http_options.headers or {}
-        google_config.http_options.headers = {**existing_headers, **headers}
+        return google_config
+
+    # Merge headers with existing ones
+    existing_headers = google_config.http_options.headers or {}
+    google_config.http_options.headers = {**existing_headers, **headers}
     return google_config
