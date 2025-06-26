@@ -14,6 +14,7 @@ starlette = "^0.45.3"
 requests = "^2.32.3"
 numpy = "^2.2.4"
 openai = "^1.68.2"
+google-genai = "1.21.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -22,3 +23,36 @@ build-backend = "poetry.core.masonry.api"
 [[tool.poetry.source]]
 name = "PyPI"
 priority = "primary"
+
+[tool.ruff]
+line-length = 140
+indent-width = 4
+
+# The [tool.yapf] section configures the YAPF Python code formatter for this project.
+# Individual rules are described below:
+# Read more about YAPF at https://www.github.com/google/yapf
+[tool.yapf]
+# Adhere to the Google style guide. Refer to https://google.github.io/styleguide/pyguide.html
+based_on_style = "google"
+# Used for inline comments
+spaces_before_comment = 2
+# Maximum line length for the formatter.
+column_limit = 140
+# Whether to split lines that are longer than the column limit.
+split_all_comma_separated_values = false
+# Break into new line before 'and' or 'or' in logical expressions.
+split_before_logical_operator = true
+# Do not put the first argument of a function call on a new line
+split_arguments_when_comma_terminated = false
+# Do not allow splitting between dictionary keys and values.
+allow_split_before_dict_value = false
+# Do not split consecutive brackets. Only relevant if dedent_closing_brackets is true.
+coalesce_brackets = true
+# Put closing brackets on a separate line
+dedent_closing_brackets = true
+# Do not split named assignments into individual lines
+split_before_named_assigns = false
+# Do not split an argument/parameter list before the first argument
+split_before_first_argument = false
+# Do not force dict entries to be on separate lines
+each_dict_entry_on_separate_line = false
