@@ -2,7 +2,9 @@ import asyncio
 from typing import Any
 
 import requests
-from openai import OpenAI, AsyncOpenAI
+from google import genai
+from google.genai.types import ContentListUnion, GenerateContentConfig, GenerateContentResponse, HttpOptions
+from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import ChatCompletion
 
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, THREAD_ID, WORKFLOW_ID, WORKFLOW_VERSION
@@ -17,9 +19,43 @@ default_headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
 openai_client = OpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
 openai_client_async = AsyncOpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
 
+google_client = client = genai.Client(
+    api_key="dummy_api_key",
+    http_options=HttpOptions(base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/google", api_version="v1", headers=default_headers)
+)
 
-def chat_completions(messages: list, model: str = None, extract_params: bool = False,
-                     config: dict = None, **chat_completions_params) -> ChatCompletion:
+
+def google_generate_content(
+    model: str, contents: ContentListUnion, google_config: GenerateContentConfig | None = None, config: dict | None = None
+) -> GenerateContentResponse:
+    """
+    Sends request to Infobip's Google Gemini endpoint to generate content.
+    
+    :param config: channel and session details
+    :param google_config: optional Google Gemini configuration
+    :param kwargs: additional parameters for the request
+    """
+    google_config = _add_headers(google_config, config)
+    return client.models.generate_content(model=model, contents=contents, config=google_config)
+
+
+async def google_generate_content_async(
+    model: str, contents: ContentListUnion, google_config: GenerateContentConfig | None = None, config: dict | None = None
+) -> GenerateContentResponse:
+    """
+    Sends async request to Infobip's Google Gemini endpoint to generate content.
+    
+    :param config: channel and session details
+    :param google_config: optional Google Gemini configuration
+    :param kwargs: additional parameters for the request
+    """
+    google_config = _add_headers(google_config, config)
+    return await client.aio.models.generate_content(model=model, contents=contents, config=google_config)
+
+
+def chat_completions(
+    messages: list, model: str = None, extract_params: bool = False, config: dict = None, **chat_completions_params
+) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint which should be 1/1 compatible with OpenAI's chat completions endpoint.
     User may also specify Gemini models and we will use Gemini with OpenAI compatible API.
@@ -38,13 +74,14 @@ def chat_completions(messages: list, model: str = None, extract_params: bool = F
         return openai_client.chat.completions.create(
             messages=messages, model=model, extra_headers=_prepare_headers(config), extra_body={"extract_params": extract_params},
             **chat_completions_params
-            )
+        )
     except Exception as e:
         raise ApplicationError(code=500, message=str(e))
 
 
-async def chat_completions_async(messages: list, model: str = None, extract_params: bool = False,
-                                 config: dict = None, **chat_completions_params) -> ChatCompletion:
+async def chat_completions_async(
+    messages: list, model: str = None, extract_params: bool = False, config: dict = None, **chat_completions_params
+) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint asynchronously, returning coroutine.
     See chat_completions pydocs for API details.
@@ -55,8 +92,8 @@ async def chat_completions_async(messages: list, model: str = None, extract_para
             model=model,
             extra_headers=_prepare_headers(config),
             extra_body={"extract_params": extract_params},
-            **chat_completions_params
-            )
+            **chat_completions_params,
+        )
     except Exception as e:
         raise ApplicationError(code=500, message=str(e))
 
@@ -90,10 +127,9 @@ async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]],
             model=req.get("model"),
             extract_params=req.get("extract_params", False),
             config=config,
-            **{k: v for k, v in req.items() if k not in {"messages", "model", "extract_params"}}
-            )
-        for req in chat_completion_requests
-        ]
+            **{k: v for k, v in req.items() if k not in {"messages", "model", "extract_params"}},
+        ) for req in chat_completion_requests
+    ]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 
@@ -146,7 +182,7 @@ def chat_session(config: dict, chat_session_request: ChatSessionRequest) -> Chat
         "memory_key": chat_session_request.memory_key,
         "extract_params": chat_session_request.extract_params,
         **chat_session_request.chat_completions_params,
-        }
+    }
     url = f"{INFOBIP_BASE_URL}/gpt-creator/omnia/chat-session"
     response_body = retryable_request(x=requests.post, config=config, url=url, json=body, headers=headers)
     return ChatSessionResponse(**response_body)
@@ -172,6 +208,21 @@ def _prepare_headers(config: dict | None) -> dict:
         SESSION_ID_HEADER: config[CONFIGURABLE][THREAD_ID],
         WORKFLOW_ID_HEADER: config[CONFIGURABLE].get(WORKFLOW_ID),
         WORKFLOW_VERSION_HEADER: config[CONFIGURABLE].get(WORKFLOW_VERSION),
-        } if config else dict()
+    } if config else dict()
     # only defined headers are returned as httpx raises on None headers
     return {k: v for k, v in extra_headers.items() if v is not None}
+
+
+def _add_headers(google_config: GenerateContentConfig, config: dict) -> GenerateContentConfig:
+    headers = _prepare_headers(config)
+    google_config = google_config or GenerateContentConfig()
+
+    # Initialize http_options with headers if not present
+    if not google_config.http_options:
+        google_config.http_options = HttpOptions(headers=headers)
+        return google_config
+
+    # Merge headers with existing ones
+    existing_headers = google_config.http_options.headers or {}
+    google_config.http_options.headers = {**existing_headers, **headers}
+    return google_config
