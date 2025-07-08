@@ -26,7 +26,7 @@ google_client = client = genai.Client(
 
 
 def google_generate_content(
-    model: str, contents: ContentListUnion, google_config: GenerateContentConfig | None = None, config: dict | None = None
+    model: str, contents: ContentListUnion, config: dict, google_config: GenerateContentConfig | None = None
 ) -> GenerateContentResponse:
     """
     Sends request to Infobip's Google Gemini endpoint to generate content.
@@ -40,7 +40,7 @@ def google_generate_content(
 
 
 async def google_generate_content_async(
-    model: str, contents: ContentListUnion, google_config: GenerateContentConfig | None = None, config: dict | None = None
+    model: str, contents: ContentListUnion, config: dict, google_config: GenerateContentConfig | None = None
 ) -> GenerateContentResponse:
     """
     Sends async request to Infobip's Google Gemini endpoint to generate content.
@@ -54,7 +54,7 @@ async def google_generate_content_async(
 
 
 def chat_completions(
-    messages: list, model: str = None, extract_params: bool = False, config: dict = None, **chat_completions_params
+    messages: list, config: dict, model: str = None, extract_params: bool = False, **chat_completions_params
 ) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint which should be 1/1 compatible with OpenAI's chat completions endpoint.
@@ -80,7 +80,7 @@ def chat_completions(
 
 
 async def chat_completions_async(
-    messages: list, model: str = None, extract_params: bool = False, config: dict = None, **chat_completions_params
+    messages: list, config: dict, model: str = None, extract_params: bool = False, **chat_completions_params
 ) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint asynchronously, returning coroutine.
@@ -98,7 +98,7 @@ async def chat_completions_async(
         raise ApplicationError(code=500, message=str(e))
 
 
-async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]], config: dict = None) -> list[ChatCompletion]:
+async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]], config: dict) -> list[ChatCompletion]:
     """
     Run multiple chat completion requests concurrently.
     This invocation should be wrapped with asyncio.run() to generate event loop as the runtime environment is synchronous.
@@ -133,7 +133,7 @@ async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]],
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 
-def chat_session(config: dict, chat_session_request: ChatSessionRequest) -> ChatSessionResponse:
+def chat_session(chat_session_request: ChatSessionRequest, config: dict) -> ChatSessionResponse:
     """
     Sends request to Infobip's stateful chat completions endpoint.
     User may specify Gemini and OpenAI models.
@@ -188,7 +188,7 @@ def chat_session(config: dict, chat_session_request: ChatSessionRequest) -> Chat
     return ChatSessionResponse(**response_body)
 
 
-def detect_intent(config: dict, intent_instruction: IntentInstruction) -> str:
+def detect_intent(intent_instruction: IntentInstruction, config: dict) -> str:
     """
     Returns intent inferred for the message using GenAI tool.
 
@@ -203,12 +203,12 @@ def detect_intent(config: dict, intent_instruction: IntentInstruction) -> str:
     return response_body["response"]
 
 
-def _prepare_headers(config: dict | None) -> dict:
+def _prepare_headers(config: dict) -> dict:
     extra_headers = {
         SESSION_ID_HEADER: config[CONFIGURABLE][THREAD_ID],
         WORKFLOW_ID_HEADER: config[CONFIGURABLE].get(WORKFLOW_ID),
         WORKFLOW_VERSION_HEADER: config[CONFIGURABLE].get(WORKFLOW_VERSION),
-    } if config else dict()
+    }
     # only defined headers are returned as httpx raises on None headers
     return {k: v for k, v in extra_headers.items() if v is not None}
 
