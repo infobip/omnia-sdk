@@ -42,12 +42,13 @@ def submit_environment_file(file_path: str, workflow_id: str) -> None:
     :param file_path: Path to the environment file.
     :param workflow_id: Unique identifier of the workflow.
     """
+    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}"}
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The environment file {file_path} does not exist.")
     if not os.path.isfile(file_path):
         raise ValueError(f"The provided path {file_path} is not a file.")
     with open(file_path, 'rb') as file:
-        response = requests.post(url=environment_url, headers=headers, params={'workflowId': workflow_id}, files={'file': file})
+        response = requests.post(url=environment_url, headers=_headers, files={'file': file})
         if response.status_code == 201:
             print("Environment file submitted successfully.")
         else:
@@ -60,8 +61,8 @@ def retrieve_environment_file(workflow_id: str) -> str:
     :param workflow_id: Unique identifier of the workflow.
     :return: Path to the downloaded environment file.
     """
-
-    response = requests.get(url=environment_url, params={'workflowId': workflow_id}, headers=headers)
+    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}"}
+    response = requests.get(url=environment_url, headers=_headers)
     if response.status_code == 200:
         file_path = f"environment_{workflow_id}"
         with open(file_path, 'wb') as file:
