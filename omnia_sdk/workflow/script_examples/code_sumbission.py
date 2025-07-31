@@ -9,6 +9,7 @@ from omnia_sdk.workflow.tools.channels.config import INFOBIP_BASE_URL, INFOBIP_A
 headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
 build_workflow_url = f'{INFOBIP_BASE_URL}/workflows/build-workflow'
 manage_workflows_url = f"{INFOBIP_BASE_URL}/workflows/manage"
+reload_workflow_url = f"{INFOBIP_BASE_URL}/workflows/reload"
 environment_url = f"{INFOBIP_BASE_URL}/environment"
 RESET_POLICY = "RESET"
 GRACEFUL_POLICY = "GRACEFUL"
@@ -152,6 +153,19 @@ def rename_workflow(current_name: str, new_name: str):
         raise ValueError(f"Failed to rename workflow: {response.status_code}\n{response.text}")
 
 
+def reload_workflow(workflow_id: str, force_unload: bool = False):
+    """
+    Reloads the workflow with the given workflow_id.
+    This is useful if you have made changes to the workflow and want to apply them without creating a new workflow.
+
+    :param workflow_id: The unique identifier of the workflow to be reloaded.
+    """
+    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}", "force-unload": force_unload}
+    response = requests.post(url=reload_workflow_url, params={'workflowId': workflow_id}, headers=_headers)
+    if response.status_code != 200:
+        raise ValueError(f"Failed to reload workflow: {response.status_code}\n{response.text}")
+
+
 def _make_zip_in_memory(dir_path: str) -> BytesIO:
     # creates in-memory .zip archive of the code base
     memory_file = BytesIO()
@@ -169,7 +183,6 @@ def _make_zip_in_memory(dir_path: str) -> BytesIO:
                 zf.write(full_path, arcname=archive)
     memory_file.seek(0)
     return memory_file
-
 
 if __name__ == '__main__':
     print(f"existing workflows: {get_workflows()}")
