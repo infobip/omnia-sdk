@@ -191,14 +191,23 @@ if __name__ == '__main__':
     # gets uuid of existing workflow, or creates new one if this is a new name
     workflow_uuid = _prepare_workflow("<your_workflow_name>")
     
+    # Step 1: Submit your code workflow
     submit_workflow(directory_path="<project_root_directory>", workflow_id=workflow_uuid)
+    
+    # Step 2: Submit environment file if needed
     submit_environment_file(file_path="<path_to_environment_file>", workflow_id=workflow_uuid)
+    
+    # Step 3: (Optional if environment file exists) Reload your workflow so it loads the environment file
+    reload_workflow(workflow_id=workflow_uuid, force_unload=True)
+    
+    # You can also review your environment file
+    file_path = retrieve_environment_file(workflow_id=workflow_uuid)
+    print(f"Environment file saved to: {file_path}")
+    
+    
     # you should rename workflow rather than creating a new one to change the name
     # rename_workflow(current_name='<your_workflow_name>', new_name='foo')
 
     # outputs all workflows and their versions
     # print(get_workflows_versions())
     
-    # retrieves environment file for the workflow
-    # file_path = retrieve_environment_file(workflow_id=workflow_uuid)
-    # print(f"Environment file saved to: {file_path}")
