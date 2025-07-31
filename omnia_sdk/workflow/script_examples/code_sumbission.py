@@ -9,6 +9,7 @@ from omnia_sdk.workflow.tools.channels.config import INFOBIP_BASE_URL, INFOBIP_A
 headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
 build_workflow_url = f'{INFOBIP_BASE_URL}/workflows/build-workflow'
 manage_workflows_url = f"{INFOBIP_BASE_URL}/workflows/manage"
+environment_url = f"{INFOBIP_BASE_URL}/environment"
 RESET_POLICY = "RESET"
 GRACEFUL_POLICY = "GRACEFUL"
 
@@ -31,7 +32,44 @@ def submit_workflow(directory_path: str, workflow_id: str, session_policy: str =
     response = requests.post(build_workflow_url, headers=_headers, files={'workflow_data': zip_buffer})
     print("Status Code:", response.status_code)
     print("Response:", response.text)
+    
+    
+def submit_environment_file(file_path: str, workflow_id: str) -> None:
+    """
+    This method submits an environment file to the Infobip platform for the specified workflow.
+    
+    :param file_path: Path to the environment file.
+    :param workflow_id: Unique identifier of the workflow.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"The environment file {file_path} does not exist.")
+    if not os.path.isfile(file_path):
+        raise ValueError(f"The provided path {file_path} is not a file.")
+    with open(file_path, 'rb') as file:
+        response = requests.post(url=environment_url, headers=headers, params={'workflowId': workflow_id}, files={'file': file})
+        if response.status_code == 201:
+            print("Environment file submitted successfully.")
+        else:
+            print("Failed to submit environment file:", response.status_code, response.text)
 
+def retrieve_environment_file(workflow_id: str) -> str:
+    """
+    This method retrieves the environment file for the specified workflow.
+    
+    :param workflow_id: Unique identifier of the workflow.
+    :return: Path to the downloaded environment file.
+    """
+
+    response = requests.get(url=environment_url, params={'workflowId': workflow_id}, headers=headers)
+    if response.status_code == 200:
+        file_path = f"environment_{workflow_id}"
+        with open(file_path, 'wb') as file:
+            file.write(response.content)
+        print(f"Environment file downloaded successfully to {file_path}.")
+        return file_path
+    else:
+        print("Failed to retrieve environment file:", response.status_code, response.text)
+        return ""
 
 def get_workflows() -> list[str]:
     """
@@ -121,6 +159,10 @@ def _make_zip_in_memory(dir_path: str) -> BytesIO:
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
         for root, _, files in os.walk(dir_path):
             for file in files:
+                # If file is a dotfile, we do not want to include it in the zip
+                if file.startswith('.'):
+                    print(f"Found dotfile {file}, skipping it.")
+                    continue
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, start=dir_path)
                 archive = os.path.join(base_dir_name, rel_path)
@@ -134,10 +176,15 @@ if __name__ == '__main__':
 
     # gets uuid of existing workflow, or creates new one if this is a new name
     workflow_uuid = _prepare_workflow("<your_workflow_name>")
+    
     submit_workflow(directory_path="<project_root_directory>", workflow_id=workflow_uuid)
-
+    submit_environment_file(file_path="<path_to_environment_file>", workflow_id=workflow_uuid)
     # you should rename workflow rather than creating a new one to change the name
     # rename_workflow(current_name='<your_workflow_name>', new_name='foo')
 
     # outputs all workflows and their versions
     # print(get_workflows_versions())
+    
+    # retrieves environment file for the workflow
+    # file_path = retrieve_environment_file(workflow_id=workflow_uuid)
+    # print(f"Environment file saved to: {file_path}")

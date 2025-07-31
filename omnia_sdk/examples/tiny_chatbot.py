@@ -18,8 +18,8 @@ See this github repo for more complete examples:
 
 class TinyChatbot(ChatbotFlow):
     # constructor with these parameters is mandatory, check the super class ChatbotFlow for details
-    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration = None,
-                 translation_table: TranslationTable = None):
+    def __init__(self, checkpointer: BaseCheckpointSaver | None = None, configuration: ChatbotConfiguration | None = None,
+                 translation_table: TranslationTable | None = None):
         super().__init__(checkpointer=checkpointer, configuration=configuration, translation_table=translation_table)
 
     def start(self, state: State, config: dict):
