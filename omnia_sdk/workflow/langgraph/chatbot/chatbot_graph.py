@@ -85,8 +85,8 @@ class State(TypedDict):
 
 class ChatbotFlow(ABC):
     # This constructor will be invoked by runtime environment with user submitted files
-    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration = None,
-                 translation_table: TranslationTable = None):
+    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration | None = None,
+                 translation_table: TranslationTable | None = None, environment: dict | None = None):
         self.__graph = StateGraph(State)
         self.configuration = configuration
         self.translation_table = translation_table if translation_table else CPaaSTranslationTable(
@@ -96,6 +96,7 @@ class ChatbotFlow(ABC):
         self._transitions()
         checkpointer = checkpointer if checkpointer else MemorySaver()
         self.workflow = self.__graph.compile(checkpointer=checkpointer)
+        self.__environment = environment
 
     @abstractmethod
     def _nodes(self):
@@ -278,6 +279,12 @@ class ChatbotFlow(ABC):
         variables = dict(snapshot.get(CHATBOT_STATE).get(VARIABLES))
         cycles.append(ConversationCycle(messages=[message], intent=intent))
         return ChatbotState(conversation_cycles=cycles, user_language=language, variables=variables)
+
+
+    def get_environment_variable(self, variable_name: str, default: Any | None = None) -> Any | None:
+        if not self.__environment:
+            return default
+        return self.__environment.get(variable_name, default)
 
     @staticmethod
     def get_language(state: State) -> str:

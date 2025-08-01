@@ -1,8 +1,6 @@
 import dataclasses
-from typing import Self
 
 import yaml
-
 from omnia_sdk.workflow.chatbot.constants import LLM_DETECTOR
 
 """
@@ -55,14 +53,14 @@ class LanguageDetectorConfig:
 # TODO not yet supported, leaving as an idea for future
 @dataclasses.dataclass
 class SessionHooks:
-    max_cycles_check: int = None
+    max_cycles_check: int | None = None
     callback: str = "{action:agent_transfer}"
 
 
 @dataclasses.dataclass
 class ChatbotConfiguration:
     default_language: str
-    language_detector: LanguageDetectorConfig = None
+    language_detector: LanguageDetectorConfig | None = None
     concurrent_session: str = "enqueue"  # this is the only strategy supported for now, see the module docstring for details
 
     @staticmethod
