@@ -12,14 +12,15 @@ from omnia_sdk.workflow.chatbot.chatbot_state import (
     ChatbotState,
     ConversationCycle,
     Message,
-    )
+)
 from omnia_sdk.workflow.chatbot.constants import (
     ASSISTANT,
     CONFIGURABLE,
     LANGUAGE,
     METADATA,
-    USER, THREAD_ID,
-    )
+    USER,
+    THREAD_ID,
+)
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
 from omnia_sdk.workflow.tools.answers._context import set_workflow_state
 from omnia_sdk.workflow.tools.channels.omni_channels import (
@@ -27,12 +28,14 @@ from omnia_sdk.workflow.tools.channels.omni_channels import (
     get_outbound_buttons_format,
     get_outbound_text_format,
     send_message,
-    )
+    ListSectionDefinition,
+    get_outbound_list_format,
+    get_outbound_image_format,
+)
 from omnia_sdk.workflow.tools.localization.cpaas_translation_table import (
     CPaaSTranslationTable,
-    )
+)
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
-
 """
 This class should enable easy access to Infobip's SaaS, CPaaS and AI services while simplifying LangGraph state management.
 Built graph is **channel agnostic** and can be multilingual with the help of language detector and translation table.
@@ -85,13 +88,15 @@ class State(TypedDict):
 
 class ChatbotFlow(ABC):
     # This constructor will be invoked by runtime environment with user submitted files
-    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration | None = None,
-                 translation_table: TranslationTable | None = None, environment: dict | None = None):
+    def __init__(
+        self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration | None = None,
+        translation_table: TranslationTable | None = None, environment: dict | None = None
+    ):
         self.__graph = StateGraph(State)
         self.configuration = configuration
         self.translation_table = translation_table if translation_table else CPaaSTranslationTable(
-            translation_table_cpaas={},
-            translation_table_constants={})
+            translation_table_cpaas={}, translation_table_constants={}
+        )
         self._nodes()
         self._transitions()
         checkpointer = checkpointer if checkpointer else MemorySaver()
@@ -267,19 +272,16 @@ class ChatbotFlow(ABC):
         Returns the state of the chatbot with the user's message and session details.
         If this is a new conversation cycle, user message will initiative new conversation cycle in the state.
         """
-        language = config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[
-            CONFIGURABLE] else self.configuration.default_language
+        language = config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[CONFIGURABLE] else self.configuration.default_language
         snapshot = self.workflow.get_state(config=config).values
         if not snapshot:
-            return ChatbotState(conversation_cycles=[ConversationCycle(messages=[message])], user_language=language,
-                                variables={})
+            return ChatbotState(conversation_cycles=[ConversationCycle(messages=[message])], user_language=language, variables={})
 
         cycles = snapshot.get(CHATBOT_STATE).get(CONVERSATION_CYCLES)
         intent = cycles[-1].intent
         variables = dict(snapshot.get(CHATBOT_STATE).get(VARIABLES))
         cycles.append(ConversationCycle(messages=[message], intent=intent))
         return ChatbotState(conversation_cycles=cycles, user_language=language, variables=variables)
-
 
     def get_environment_variable(self, variable_name: str, default: Any | None = None) -> Any | None:
         if not self.__environment:
@@ -416,6 +418,31 @@ class ChatbotFlow(ABC):
         ChatbotFlow.send_response(content=content, state=state, config=config)
 
     @staticmethod
+    def send_list_response(text: str, subtext: str, sections: list[ListSectionDefinition], state: State, config: dict):
+        """
+        Sends text message with list of options to the user on the channel in which user initiated the conversation.
+
+        :param text: to send to the user
+        :param subtext: text shown inside of list picker
+        :param sections: to render in list picker
+        :param state: conversation state
+        :param config: channel and session details
+        """
+        content = get_outbound_list_format(text=text, subtext=subtext, sections=sections)
+        ChatbotFlow.send_response(content=content, state=state, config=config)
+
+    @staticmethod
+    def send_image_response(image_url: str, state: State, config: dict):
+        """
+        Sends image response to the user on the channel in which user initiated the conversation.
+        :param image_url: URL of the image to send to user
+        :param state: conversation state
+        :param config: channel and session details
+        """
+        content = get_outbound_image_format(image_url=image_url)
+        ChatbotFlow.send_response(content=content, state=state, config=config)
+
+    @staticmethod
     def send_response(content: dict, state: State, config: dict = None) -> None:
         """
         Sends response to the user on the channel in which user initiated the conversation.
@@ -428,8 +455,7 @@ class ChatbotFlow(ABC):
         ChatbotFlow.save_message(state=state, message=message)
 
     @staticmethod
-    def wait_user_input(state: State, config: dict, variable_name: str = None,
-                        extractor: Callable = lambda x: x) -> Any | None:
+    def wait_user_input(state: State, config: dict, variable_name: str = None, extractor: Callable = lambda x: x) -> Any | None:
         """
         Waits for user input over the communication channel and saves it in the state. Variable name if specified will
         save the extracted value from the user's message.
