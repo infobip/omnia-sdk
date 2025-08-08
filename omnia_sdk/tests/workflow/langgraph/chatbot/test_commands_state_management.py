@@ -1,4 +1,3 @@
-from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.constants import END
 from langgraph.types import Command
 
@@ -14,7 +13,6 @@ m2 = Message(role=USER, content={TYPE: TEXT.upper(), TEXT: "Bye!"})
 
 foo, bar = ("foo", "bar")
 start, second = ("start", "second")
-
 """
 This module tests that chatbot state management works correctly with node_checkpointer.py decorator to propagate state updates.
 Additionally we test that the Command object transitions work as expected:
@@ -26,9 +24,6 @@ Our abstraction Transition is a wrapper around Command which manages the state, 
 
 
 class TinyCommandsChatbot(ChatbotFlow):
-    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration = None,
-                 translation_table=None):
-        super().__init__(checkpointer=checkpointer, configuration=configuration, translation_table=translation_table)
 
     def start(self, state: State):
         assert m1 == self.get_user_message(state=state)

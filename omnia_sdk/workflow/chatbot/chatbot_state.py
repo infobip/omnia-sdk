@@ -2,8 +2,7 @@ import dataclasses
 
 from typing_extensions import TypedDict
 
-from omnia_sdk.workflow.chatbot.constants import TYPE, TEXT, PAYLOAD, BUTTON_REPLY
-
+from omnia_sdk.workflow.chatbot.constants import TYPE, TEXT, PAYLOAD, BUTTON_REPLY, LIST_REPLY
 """
 This module contains dataclasses for chatbot state management.
 """
@@ -27,6 +26,8 @@ class Message:
             return content[TEXT]
         if content[TYPE] == BUTTON_REPLY:
             return content[PAYLOAD]
+        if content[TYPE] == LIST_REPLY:
+            return content[TEXT]
         return None
 
     @staticmethod
