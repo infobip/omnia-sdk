@@ -19,20 +19,19 @@ CALLBACK_URL = "callback_url"
 BODY = "body"
 
 messages_url = f"{channels_config.INFOBIP_BASE_URL}/messages-api/1/messages"
-
 """
-This module provides integration with Infobip's Omni Channel API
+This module provides integration with Infobip's Omni Channel API.
 User may send content to various channels with a single API which abstracts channel details.
+Messages API https://www.infobip.com/docs/api/platform/messages-api
 """
 
-InboundContent = namedtuple("InboundContent", ["type", "payload"])
 ButtonDefinition = namedtuple("ButtonDefinition", ["type", "text", "postback_data"])
+ListSectionDefinition = namedtuple("ListDefinition", ["sectionTitle", "items"])
 
 
 def get_outbound_text_format(text: str) -> dict:
     """
     Prepares text message to be compliant with Messages API format.
-    Messages API https://www.infobip.com/docs/api/platform/messages-api
 
     :param text: to send
     :return: message content in Messages API format
@@ -51,7 +50,36 @@ def get_outbound_buttons_format(text: str, buttons: list[ButtonDefinition]) -> d
     return {
         BODY: {TYPE: TEXT.upper(), TEXT: text},
         "buttons": [{TYPE: button.type, TEXT: button.text, POSTBACK_DATA: button.postback_data} for button in buttons],
+    }
+
+
+def get_outbound_list_format(text: str, subtext: str, sections: list[ListSectionDefinition]) -> dict:
+    """
+    Prepares text message with list sections to be compliant with Messages API format.
+
+    :param text: to send with list picker
+    :param subtext: to show in list picker
+    :param sections: list of sections to show
+    :return: message content in Messages API format
+    """
+    return {
+        BODY: {
+            TYPE: "LIST", TEXT: text, "subtext": subtext, "sections": [{
+                "sectionTitle": section.sectionTitle,
+                "items": section.items,
+            } for section in sections]
         }
+    }
+
+
+def get_outbound_image_format(image_url: str) -> dict:
+    """
+    Prepares image message to be compliant with Messages API format.
+
+    :param image_url: URL of the image to send
+    :return: message content in Messages API format
+    """
+    return {BODY: {TYPE: "IMAGE", "url": image_url}}
 
 
 def send_message(message: Message, config: dict) -> None:
@@ -113,7 +141,7 @@ def _send_to_channel(content: dict, config: dict):
             "message-id": configurable["message_id"],
             "user-id": configurable["user_id"],
             "workflow-id": configurable[WORKFLOW_ID],
-            }
+        }
         _ = retryable_request(config=config, x=requests.post, url=callback_url, json=content, headers=headers, timeout=5)
     # deliver message to OTT Gateway
     else:
