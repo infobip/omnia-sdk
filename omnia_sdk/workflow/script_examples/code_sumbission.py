@@ -157,14 +157,15 @@ def rename_workflow(current_name: str, new_name: str):
         raise ValueError(f"Failed to rename workflow: {response.status_code}\n{response.text}")
 
 
-def reload_workflow(workflow_id: str, force_unload: bool = False):
+def reload_workflow(workflow_id: str, session_policy: str = RESET_POLICY):
     """
     Reloads the workflow with the given workflow_id.
     This is useful if you have made changes to the workflow and want to apply them without creating a new workflow.
 
     :param workflow_id: The unique identifier of the workflow to be reloaded.
+    :param session_policy: Policy for handling existing sessions after reloading the workflow.
     """
-    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}", "force-unload": str(force_unload)}
+    _headers = {'workflow-id': workflow_id, "Authorization": f"App {INFOBIP_API_KEY}", "session-policy": session_policy}
     response = requests.post(url=reload_workflow_url, params={'workflowId': workflow_id}, headers=_headers, json={})
     if response.status_code != 200:
         raise ValueError(f"Failed to reload workflow: {response.status_code}\n{response.text}")
@@ -213,7 +214,7 @@ if __name__ == '__main__':
     submit_environment_file(file_path="<path_to_environment_file>", workflow_id=workflow_uuid)
 
     # Step 3: (Optional if environment file exists) Reload your workflow so it loads the environment file
-    reload_workflow(workflow_id=workflow_uuid, force_unload=True)
+    reload_workflow(workflow_id=workflow_uuid)
 
     # You can also review your environment file
     file_path = retrieve_environment_file(workflow_id=workflow_uuid)
