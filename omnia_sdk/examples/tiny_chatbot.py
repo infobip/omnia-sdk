@@ -1,14 +1,11 @@
 from datetime import datetime
 
-from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.constants import END
 
 from omnia_sdk.workflow.chatbot.chatbot_configuration import ChatbotConfiguration
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
 from omnia_sdk.workflow.chatbot.constants import ASSISTANT, CONFIGURABLE, TEXT, TYPE, USER, THREAD_ID
 from omnia_sdk.workflow.langgraph.chatbot.chatbot_graph import ChatbotFlow, State
-from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
-
 """
 This is a "hello world" chatbot which demonstrates how user can build LangGraph chatbot workflows with the SDK.
 See this github repo for more complete examples:
@@ -17,10 +14,6 @@ See this github repo for more complete examples:
 
 
 class TinyChatbot(ChatbotFlow):
-    # constructor with these parameters is mandatory, check the super class ChatbotFlow for details
-    def __init__(self, checkpointer: BaseCheckpointSaver | None = None, configuration: ChatbotConfiguration | None = None,
-                 translation_table: TranslationTable | None = None):
-        super().__init__(checkpointer=checkpointer, configuration=configuration, translation_table=translation_table)
 
     def start(self, state: State, config: dict):
         print(state)

@@ -4,7 +4,7 @@ from collections import namedtuple
 import requests
 
 from omnia_sdk.workflow.chatbot.chatbot_state import Message
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE, WORKFLOW_ID, THREAD_ID
+from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, TEXT, TYPE, WORKFLOW_ID, THREAD_ID, ASSISTANT
 from omnia_sdk.workflow.tools.channels import config as channels_config
 from omnia_sdk.workflow.tools.channels._context import add_response
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
@@ -89,33 +89,6 @@ def send_message(message: Message, config: dict) -> None:
     :param config: with session and channel details
     """
     _send_to_channel(content=message.content, config=config)
-
-
-def send_text(text: str, config: dict) -> None:
-    """
-    Sends text message to the channel defined in config. This method directly sends text message
-    to the channel without persisting message in state of flow. If you also want to persist message in state of flow
-    use send_text_response from ChatbotGraphFlow.
-
-    :param text: to send
-    :param config: with session and channel details
-    """
-    content = get_outbound_text_format(text=text)
-    _send_to_channel(content=content, config=config)
-
-
-def send_buttons(text: str, buttons: list[ButtonDefinition], config: dict) -> None:
-    """
-    Sends message and buttons to the channel defined in config. This method directly sends button message
-    to the channel without persisting message in state of flow. If you also want to persist message in state of flow
-    use send_buttons_response from ChatbotGraphFlow.
-
-    :param text: to send with buttons
-    :param buttons: to render in chat
-    :param config: with session and channel details
-    """
-    content = get_outbound_buttons_format(text=text, buttons=buttons)
-    _send_to_channel(content=content, config=config)
 
 
 def send_template():

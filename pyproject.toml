@@ -8,9 +8,9 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.12, <3.14"
 holidays = "^0.66"
-langgraph = "0.4.5"
+langgraph = "0.6.5"
 pytest = "^8.3.4"
-starlette = "^0.45.3"
+starlette = "^0.47.2"
 requests = "^2.32.3"
 numpy = "^2.2.4"
 openai = "^1.68.2"
@@ -50,7 +50,7 @@ allow_split_before_dict_value = false
 # Do not split consecutive brackets. Only relevant if dedent_closing_brackets is true.
 coalesce_brackets = true
 # Put closing brackets on a separate line
-dedent_closing_brackets = true
+dedent_closing_brackets = false
 # Do not split named assignments into individual lines
 split_before_named_assigns = false
 # Do not split an argument/parameter list before the first argument

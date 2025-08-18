@@ -20,6 +20,7 @@ from omnia_sdk.workflow.chatbot.constants import (
     METADATA,
     USER,
     THREAD_ID,
+    RECURSION_LIMIT,
 )
 from omnia_sdk.workflow.langgraph.chatbot.node_checkpointer import NodeCheckpointer
 from omnia_sdk.workflow.tools.answers._context import set_workflow_state
@@ -33,8 +34,7 @@ from omnia_sdk.workflow.tools.channels.omni_channels import (
     get_outbound_image_format,
 )
 from omnia_sdk.workflow.tools.localization.cpaas_translation_table import (
-    CPaaSTranslationTable,
-)
+    CPaaSTranslationTable,)
 from omnia_sdk.workflow.tools.localization.translation_table import TranslationTable
 """
 This class should enable easy access to Infobip's SaaS, CPaaS and AI services while simplifying LangGraph state management.
@@ -86,17 +86,17 @@ class State(TypedDict):
     chatbot_state: Annotated[ChatbotState, reduce_state]
 
 
+MAX_RECURSION_LIMIT = 100
+
+
 class ChatbotFlow(ABC):
     # This constructor will be invoked by runtime environment with user submitted files
-    def __init__(
-        self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration | None = None,
-        translation_table: TranslationTable | None = None, environment: dict | None = None
-    ):
+    def __init__(self, checkpointer: BaseCheckpointSaver = None, configuration: ChatbotConfiguration | None = None,
+                 translation_table: TranslationTable | None = None, environment: dict | None = None):
         self.__graph = StateGraph(State)
         self.configuration = configuration
         self.translation_table = translation_table if translation_table else CPaaSTranslationTable(
-            translation_table_cpaas={}, translation_table_constants={}
-        )
+            translation_table_cpaas={}, translation_table_constants={})
         self._nodes()
         self._transitions()
         checkpointer = checkpointer if checkpointer else MemorySaver()
@@ -179,6 +179,7 @@ class ChatbotFlow(ABC):
         :param config: channel and session parameters
         """
         # end node does not have any nodes to which it loops back
+        self._set_recursion_limit(config=config)
         if self.workflow.get_state(config).next:
             self._resume(message=message, config=config)
             return
@@ -193,6 +194,10 @@ class ChatbotFlow(ABC):
         current_state = self._prepare_state(message=message, config=config)
         if self._should_start(config=config, message=message):
             self.workflow.invoke({CHATBOT_STATE: current_state}, config=config)
+
+    def _set_recursion_limit(self, config: dict):
+        if self.configuration and self.configuration.recursion_limit:
+            config[RECURSION_LIMIT] = min(self.configuration.recursion_limit, MAX_RECURSION_LIMIT)
 
     def add_node(self, name: str, function: Callable) -> None:
         """
@@ -477,9 +482,8 @@ class ChatbotFlow(ABC):
         :return: extracted text content from user message
         """
         message: Message = interrupt(value="")
-        state[CHATBOT_STATE][_user_language] = (
-            config[CONFIGURABLE][LANGUAGE] if LANGUAGE in config[CONFIGURABLE] else state[CHATBOT_STATE][_user_language]
-        )
+        state[CHATBOT_STATE][_user_language] = (config[CONFIGURABLE][LANGUAGE]
+                                                if LANGUAGE in config[CONFIGURABLE] else state[CHATBOT_STATE][_user_language])
         ChatbotFlow.save_message(state=state, message=message)
         if variable_name:
             ChatbotFlow.save_variable(name=variable_name, value=extractor(message.get_text()), state=state)

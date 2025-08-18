@@ -1,8 +1,7 @@
 import dataclasses
 
 import yaml
-from omnia_sdk.workflow.chatbot.constants import LLM_DETECTOR
-
+from omnia_sdk.workflow.chatbot.constants import LLM_DETECTOR, RECURSION_LIMIT
 """
 This configuration lets user control automatic runtime environment features:
  - language detection and localisation (optional)
@@ -62,6 +61,7 @@ class ChatbotConfiguration:
     default_language: str
     language_detector: LanguageDetectorConfig | None = None
     concurrent_session: str = "enqueue"  # this is the only strategy supported for now, see the module docstring for details
+    recursion_limit: int | None = None
 
     @staticmethod
     def from_yaml(path: str) -> "ChatbotConfiguration":
@@ -75,7 +75,7 @@ class ChatbotConfiguration:
             data = yaml.safe_load(f)
         language_detector = ChatbotConfiguration._read_language_detector(data.get("language_detector"))
         return ChatbotConfiguration(default_language=data["default_language"], language_detector=language_detector,
-                                    concurrent_session=data.get("concurrent_session", "enqueue"))
+                                    concurrent_session=data.get("concurrent_session", "enqueue"), recursion_limit=data.get(RECURSION_LIMIT))
 
     @staticmethod
     def _read_language_detector(lang_detector_data) -> LanguageDetectorConfig | None:
