@@ -198,6 +198,8 @@ class ChatbotFlow(ABC):
     def _set_recursion_limit(self, config: dict):
         if self.configuration and self.configuration.recursion_limit:
             config[RECURSION_LIMIT] = min(self.configuration.recursion_limit, MAX_RECURSION_LIMIT)
+        else:
+            config[RECURSION_LIMIT] = MAX_RECURSION_LIMIT
 
     def add_node(self, name: str, function: Callable) -> None:
         """
@@ -224,6 +226,7 @@ class ChatbotFlow(ABC):
         :param from_node: from which to go into the next node
         :param function: to determine the next node
         """
+        function.__annotations__.clear()
         self.__graph.add_conditional_edges(from_node, function)
 
     def send_predefined_response(self, key: str, state: State, config: dict, **kwargs) -> None:
