@@ -108,3 +108,18 @@ or
 import logging
 ```
 Workflow server will ensure that logging is properly configured when you submit the workflow.
+
+## Tracing for local development
+
+MLflow is supported for tracing. To use it locally, user should have mlflow server running and set the following environment variables:
+```bash
+MLFLOW_TRACKING_URI=http://localhost:5000
+MLFLOW_TRACKING_USERNAME=admin
+MLFLOW_TRACKING_PASSWORD=<your_password>
+```
+
+To enable tracing in the workflow, call the following function:
+```python
+from omnia_sdk.workflow.tracing.mlflow import setup_mlflow_tracing
+setup_mlflow_tracing(experiment_name="my_experiment")
+```

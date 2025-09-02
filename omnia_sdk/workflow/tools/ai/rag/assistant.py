@@ -1,3 +1,4 @@
+import mlflow
 import requests
 
 from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, THREAD_ID
@@ -7,13 +8,13 @@ from omnia_sdk.workflow.tools.rest.exceptions import ApplicationError
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
 
 default_headers = {"Authorization": f"App {INFOBIP_API_KEY}"}
-
 """
 This module provides integration with Infobip's RAG system.
 RAG pipeline should be built via portal or API (TODO details) before using this module.
 """
 
 
+@mlflow.trace
 def assistant_response(message: str, assistant_id: str, config: dict, prompt_var: str = None, context: str = None,
                        error_message: str = None, language: str = None) -> str:
     """
@@ -36,9 +37,8 @@ def assistant_response(message: str, assistant_id: str, config: dict, prompt_var
     message = f"{message}\n{_get_local_language_instruction(lang_iso=language)}"
     body = {"message": message, "prompt_var": prompt_var, "context": context}
     try:
-        response = retryable_request(
-            x=requests.post, config=config, url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/2/query", json=body, headers=headers
-            )
+        response = retryable_request(x=requests.post, config=config, url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/2/query", json=body,
+                                     headers=headers)
         return response["message"]
     except ApplicationError as application_error:
         if error_message:

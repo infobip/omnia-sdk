@@ -1,15 +1,34 @@
 import asyncio
 from typing import Any
 
+import mlflow
 import requests
 from google import genai
-from google.genai.types import ContentListUnion, GenerateContentConfig, GenerateContentResponse, HttpOptions
+from google.genai.types import (
+    ContentListUnion,
+    GenerateContentConfig,
+    GenerateContentResponse,
+    HttpOptions,
+)
 from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import ChatCompletion
 
-from omnia_sdk.workflow.chatbot.constants import CONFIGURABLE, THREAD_ID, WORKFLOW_ID, WORKFLOW_VERSION
-from omnia_sdk.workflow.tools.ai.constants import SESSION_ID_HEADER, WORKFLOW_ID_HEADER, WORKFLOW_VERSION_HEADER
-from omnia_sdk.workflow.tools.ai.llm_models import ChatSessionRequest, ChatSessionResponse, IntentInstruction
+from omnia_sdk.workflow.chatbot.constants import (
+    CONFIGURABLE,
+    THREAD_ID,
+    WORKFLOW_ID,
+    WORKFLOW_VERSION,
+)
+from omnia_sdk.workflow.tools.ai.constants import (
+    SESSION_ID_HEADER,
+    WORKFLOW_ID_HEADER,
+    WORKFLOW_VERSION_HEADER,
+)
+from omnia_sdk.workflow.tools.ai.llm_models import (
+    ChatSessionRequest,
+    ChatSessionResponse,
+    IntentInstruction,
+)
 from omnia_sdk.workflow.tools.channels.config import INFOBIP_API_KEY, INFOBIP_BASE_URL
 from omnia_sdk.workflow.tools.rest.exceptions import ApplicationError
 from omnia_sdk.workflow.tools.rest.retryable_http_client import retryable_request
@@ -20,14 +39,12 @@ openai_client = OpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omn
 openai_client_async = AsyncOpenAI(api_key="", base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/openai/v1", default_headers=default_headers)
 
 google_client = client = genai.Client(
-    api_key="dummy_api_key",
-    http_options=HttpOptions(base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/google", api_version="v1", headers=default_headers)
-)
+    api_key="dummy_api_key", http_options=HttpOptions(base_url=f"{INFOBIP_BASE_URL}/gpt-creator/omnia/google", api_version="v1",
+                                                      headers=default_headers))
 
 
-def google_generate_content(
-    model: str, contents: ContentListUnion, config: dict, google_config: GenerateContentConfig | None = None
-) -> GenerateContentResponse:
+def google_generate_content(model: str, contents: ContentListUnion, config: dict,
+                            google_config: GenerateContentConfig | None = None) -> GenerateContentResponse:
     """
     Sends request to Infobip's Google Gemini endpoint to generate content.
     
@@ -39,9 +56,8 @@ def google_generate_content(
     return client.models.generate_content(model=model, contents=contents, config=google_config)
 
 
-async def google_generate_content_async(
-    model: str, contents: ContentListUnion, config: dict, google_config: GenerateContentConfig | None = None
-) -> GenerateContentResponse:
+async def google_generate_content_async(model: str, contents: ContentListUnion, config: dict,
+                                        google_config: GenerateContentConfig | None = None) -> GenerateContentResponse:
     """
     Sends async request to Infobip's Google Gemini endpoint to generate content.
     
@@ -53,9 +69,8 @@ async def google_generate_content_async(
     return await client.aio.models.generate_content(model=model, contents=contents, config=google_config)
 
 
-def chat_completions(
-    messages: list, config: dict, model: str = None, extract_params: bool = False, **chat_completions_params
-) -> ChatCompletion:
+def chat_completions(messages: list, config: dict, model: str = None, extract_params: bool = False,
+                     **chat_completions_params) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint which should be 1/1 compatible with OpenAI's chat completions endpoint.
     User may also specify Gemini models and we will use Gemini with OpenAI compatible API.
@@ -71,17 +86,14 @@ def chat_completions(
     :return: ChatCompletion model instance
     """
     try:
-        return openai_client.chat.completions.create(
-            messages=messages, model=model, extra_headers=_prepare_headers(config), extra_body={"extract_params": extract_params},
-            **chat_completions_params
-        )
+        return openai_client.chat.completions.create(messages=messages, model=model, extra_headers=_prepare_headers(config),
+                                                     extra_body={"extract_params": extract_params}, **chat_completions_params)
     except Exception as e:
         raise ApplicationError(code=500, message=str(e))
 
 
-async def chat_completions_async(
-    messages: list, config: dict, model: str = None, extract_params: bool = False, **chat_completions_params
-) -> ChatCompletion:
+async def chat_completions_async(messages: list, config: dict, model: str = None, extract_params: bool = False,
+                                 **chat_completions_params) -> ChatCompletion:
     """
     Sends request to Infobip's chat completions endpoint asynchronously, returning coroutine.
     See chat_completions pydocs for API details.
@@ -133,6 +145,7 @@ async def batch_chat_completions(chat_completion_requests: list[dict[str, Any]],
     return await asyncio.gather(*tasks, return_exceptions=True)
 
 
+@mlflow.trace
 def chat_session(chat_session_request: ChatSessionRequest, config: dict) -> ChatSessionResponse:
     """
     Sends request to Infobip's stateful chat completions endpoint.
@@ -188,6 +201,7 @@ def chat_session(chat_session_request: ChatSessionRequest, config: dict) -> Chat
     return ChatSessionResponse(**response_body)
 
 
+@mlflow.trace
 def detect_intent(intent_instruction: IntentInstruction, config: dict) -> str:
     """
     Returns intent inferred for the message using GenAI tool.
